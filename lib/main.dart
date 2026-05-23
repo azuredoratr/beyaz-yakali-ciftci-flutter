@@ -24,7 +24,7 @@ class BeyazYakaliCiftciApp extends StatelessWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.dmSansTextTheme(),
       ),
-      home: const AnaEkranPage(),
+      home: const AnaSayfa(),
     );
   }
 }
@@ -45,4 +45,93 @@ class AppColors {
   static const ciceklenme = Color(0xFFFDD835);
   static const meyve = Color(0xFFFB8C00);
   static const hasat = Color(0xFFE53935);
+}
+
+class AnaSayfa extends StatefulWidget {
+  const AnaSayfa({super.key});
+
+  @override
+  State<AnaSayfa> createState() => _AnaSayfaState();
+}
+
+class _AnaSayfaState extends State<AnaSayfa> {
+  int _secilenIndex = 0;
+
+  final List<Widget> _sayfalar = [
+    const AnaEkranPage(),
+    const Scaffold(body: Center(child: Text('Takvim'))),
+    const Scaffold(body: Center(child: Text('Bitkilerim'))),
+    const Scaffold(body: Center(child: Text('AI Destek'))),
+    const Scaffold(body: Center(child: Text('Profil'))),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _sayfalar[_secilenIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: AppColors.cardBorder, width: 1),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(0, Icons.home_outlined, Icons.home, 'Ana Sayfa'),
+                _buildNavItem(1, Icons.calendar_today_outlined, Icons.calendar_today, 'Takvim'),
+                _buildNavItem(2, Icons.local_florist_outlined, Icons.local_florist, 'Bitkilerim'),
+                _buildNavItem(3, Icons.auto_awesome_outlined, Icons.auto_awesome, 'AI Destek'),
+                _buildNavItem(4, Icons.person_outline, Icons.person, 'Profil'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+    final isSelected = _secilenIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _secilenIndex = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 22,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: GoogleFonts.dmSans(
+                fontSize: 10,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
