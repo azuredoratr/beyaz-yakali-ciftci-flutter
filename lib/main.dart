@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'pages/ana_ekran.dart';
 
 void main() {
   runApp(const BeyazYakaliCiftciApp());
@@ -23,7 +24,7 @@ class BeyazYakaliCiftciApp extends StatelessWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.dmSansTextTheme(),
       ),
-      home: const AnaEkran(),
+      home: const AnaEkranPage(),
     );
   }
 }
@@ -44,45 +45,4 @@ class AppColors {
   static const ciceklenme = Color(0xFFFDD835);
   static const meyve = Color(0xFFFB8C00);
   static const hasat = Color(0xFFE53935);
-}
-
-class AnaEkran extends StatelessWidget {
-  const AnaEkran({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                '🌱',
-                style: TextStyle(fontSize: 72),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Beyaz Yakalı Çiftçi',
-                style: GoogleFonts.dmSans(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Kendi doğanı yetiştir.',
-                style: GoogleFonts.dmSans(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
