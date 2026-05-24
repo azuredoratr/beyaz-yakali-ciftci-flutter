@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'pages/ana_ekran.dart';
 import 'pages/takvim.dart';
 import 'pages/sorun_bildir.dart';
+import 'pages/onboarding.dart';
 
 void main() {
   runApp(const BeyazYakaliCiftciApp());
@@ -26,7 +27,7 @@ class BeyazYakaliCiftciApp extends StatelessWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.dmSansTextTheme(),
       ),
-      home: const AnaSayfa(),
+      home: const GirisKontrol(),
     );
   }
 }
@@ -47,6 +48,27 @@ class AppColors {
   static const ciceklenme = Color(0xFFFDD835);
   static const meyve = Color(0xFFFB8C00);
   static const hasat = Color(0xFFE53935);
+}
+
+class GirisKontrol extends StatefulWidget {
+  const GirisKontrol({super.key});
+
+  @override
+  State<GirisKontrol> createState() => _GirisKontrolState();
+}
+
+class _GirisKontrolState extends State<GirisKontrol> {
+  bool _onboardingTamamlandi = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_onboardingTamamlandi) {
+      return OnboardingPage(
+        onTamamla: () => setState(() => _onboardingTamamlandi = true),
+      );
+    }
+    return const AnaSayfa();
+  }
 }
 
 class AnaSayfa extends StatefulWidget {
