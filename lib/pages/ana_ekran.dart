@@ -1,10 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
+import 'bitki_ekle.dart';
 import 'bitki_detay.dart';
 
-class AnaEkranPage extends StatelessWidget {
+class AnaEkranPage extends StatefulWidget {
   const AnaEkranPage({super.key});
+
+  @override
+  State<AnaEkranPage> createState() => _AnaEkranPageState();
+}
+
+class _AnaEkranPageState extends State<AnaEkranPage> {
+  List<Map<String, dynamic>> _bitkiler = [
+    {
+      'id': '1',
+      'bitki_id': 'domates',
+      'isim': 'Domates',
+      'tur': 'Cherry Domates',
+      'emoji': '🍅',
+      'hafta': 7,
+      'baslangic': 'tohum',
+    },
+    {
+      'id': '2',
+      'bitki_id': 'salatalik',
+      'isim': 'Salatalık',
+      'tur': 'Kıtır Salatalık',
+      'emoji': '🥒',
+      'hafta': 4,
+      'baslangic': 'fide',
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +45,7 @@ class AnaEkranPage extends StatelessWidget {
               children: [
                 _buildHeader(),
                 _buildHavaDurumu(),
-                _buildBitkilerim(context),
+                _buildBitkilerim(),
                 _buildHaftalikGorevler(),
                 const SizedBox(height: 100),
               ],
@@ -61,7 +88,7 @@ class AnaEkranPage extends StatelessWidget {
                 ],
               ),
               Text(
-                'Bahçende 4 görev seni bekliyor.',
+                'Bahçende ${_bitkiler.length} bitki var.',
                 style: GoogleFonts.dmSans(
                   fontSize: 14,
                   color: AppColors.textSecondary,
@@ -69,13 +96,7 @@ class AnaEkranPage extends StatelessWidget {
               ),
             ],
           ),
-          Row(
-            children: [
-              _buildIconButton(Icons.notifications_outlined),
-              const SizedBox(width: 8),
-              _buildAddButton(),
-            ],
-          ),
+          _buildIconButton(Icons.notifications_outlined),
         ],
       ),
     );
@@ -91,18 +112,6 @@ class AnaEkranPage extends StatelessWidget {
         border: Border.all(color: AppColors.cardBorder),
       ),
       child: Icon(icon, size: 20, color: AppColors.textPrimary),
-    );
-  }
-
-  Widget _buildAddButton() {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Icon(Icons.add, size: 20, color: Colors.white),
     );
   }
 
@@ -169,13 +178,7 @@ class AnaEkranPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBitkilerim(BuildContext context) {
-    final bitkiler = [
-      {'isim': 'Cherry Domates', 'asama': 'Büyüme Aşaması', 'yuzde': 0.72, 'renk': AppColors.buyume},
-      {'isim': 'Salatalık', 'asama': 'Büyüme Aşaması', 'yuzde': 0.45, 'renk': AppColors.tarla},
-      {'isim': 'Fesleğen', 'asama': 'Hasada Hazır', 'yuzde': 0.90, 'renk': AppColors.hasat},
-    ];
-
+  Widget _buildBitkilerim() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -208,10 +211,58 @@ class AnaEkranPage extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: bitkiler.length,
+            itemCount: _bitkiler.length + 1,
             itemBuilder: (context, index) {
-              final bitki = bitkiler[index];
-              return _buildBitkiKarti(context, bitki);
+              if (index == _bitkiler.length) {
+                return GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BitkiEklePage(
+                        onBitkiEklendi: (yeniBitki) {
+                          setState(() => _bitkiler.add(yeniBitki));
+                        },
+                      ),
+                    ),
+                  ),
+                  child: Container(
+                    width: 120,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.add, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Bitki Ekle',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return _buildBitkiKarti(_bitkiler[index]);
             },
           ),
         ),
@@ -219,7 +270,7 @@ class AnaEkranPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBitkiKarti(BuildContext context, Map<String, dynamic> bitki) {
+  Widget _buildBitkiKarti(Map<String, dynamic> bitki) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -242,8 +293,11 @@ class AnaEkranPage extends StatelessWidget {
                 color: AppColors.background,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: const Center(
-                child: Text('🌱', style: TextStyle(fontSize: 40)),
+              child: Center(
+                child: Text(
+                  bitki['emoji'] as String? ?? '🌱',
+                  style: const TextStyle(fontSize: 40),
+                ),
               ),
             ),
             Padding(
@@ -252,7 +306,7 @@ class AnaEkranPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    bitki['isim'] as String,
+                    bitki['tur'] as String? ?? bitki['isim'] as String? ?? '',
                     style: GoogleFonts.dmSans(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -262,7 +316,7 @@ class AnaEkranPage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    bitki['asama'] as String,
+                    '${bitki['hafta']}. hafta',
                     style: GoogleFonts.dmSans(
                       fontSize: 11,
                       color: AppColors.textSecondary,
@@ -272,11 +326,9 @@ class AnaEkranPage extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(99),
                     child: LinearProgressIndicator(
-                      value: bitki['yuzde'] as double,
+                      value: (bitki['hafta'] as int) / 18,
                       backgroundColor: AppColors.background,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        bitki['renk'] as Color,
-                      ),
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
                       minHeight: 4,
                     ),
                   ),
@@ -290,12 +342,6 @@ class AnaEkranPage extends StatelessWidget {
   }
 
   Widget _buildHaftalikGorevler() {
-    final gorevler = [
-      {'baslik': 'Sulama', 'bitki': 'Cherry Domates', 'durum': 'Bugün', 'tamamlandi': true},
-      {'baslik': 'Gübreleme', 'bitki': 'Fesleğen', 'durum': 'Yarın', 'tamamlandi': false},
-      {'baslik': 'Destek Çubuğu Ekle', 'bitki': 'Salatalık', 'durum': '2 Gün Kaldı', 'tamamlandi': false},
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -330,26 +376,21 @@ class AnaEkranPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.cardBorder),
           ),
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: gorevler.length,
-            separatorBuilder: (_, __) => Divider(
-              height: 1,
-              color: AppColors.cardBorder,
-            ),
-            itemBuilder: (context, index) {
-              final gorev = gorevler[index];
-              return _buildGorevSatiri(gorev);
-            },
+          child: Column(
+            children: [
+              _buildGorevSatiri('Sulama', 'Cherry Domates', 'Bugün', true),
+              Divider(height: 1, color: AppColors.cardBorder),
+              _buildGorevSatiri('Gübreleme', 'Salatalık', 'Yarın', false),
+              Divider(height: 1, color: AppColors.cardBorder),
+              _buildGorevSatiri('Destek Çubuğu Ekle', 'Cherry Domates', '2 Gün Kaldı', false),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildGorevSatiri(Map<String, dynamic> gorev) {
-    final tamamlandi = gorev['tamamlandi'] as bool;
+  Widget _buildGorevSatiri(String baslik, String bitki, String durum, bool tamamlandi) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -369,7 +410,7 @@ class AnaEkranPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  gorev['baslik'] as String,
+                  baslik,
                   style: GoogleFonts.dmSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -378,7 +419,7 @@ class AnaEkranPage extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  gorev['bitki'] as String,
+                  bitki,
                   style: GoogleFonts.dmSans(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -388,7 +429,7 @@ class AnaEkranPage extends StatelessWidget {
             ),
           ),
           Text(
-            gorev['durum'] as String,
+            durum,
             style: GoogleFonts.dmSans(
               fontSize: 12,
               color: tamamlandi ? AppColors.secondary : AppColors.textSecondary,
