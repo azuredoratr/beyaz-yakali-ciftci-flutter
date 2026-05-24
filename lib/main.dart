@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'pages/ana_ekran.dart';
 import 'pages/takvim.dart';
+import 'pages/sorun_bildir.dart';
 
 void main() {
   runApp(const BeyazYakaliCiftciApp());
@@ -62,7 +63,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     const AnaEkranPage(),
     const TakvimPage(),
     const Scaffold(body: Center(child: Text('Bitkilerim'))),
-    const Scaffold(body: Center(child: Text('AI Destek'))),
+    const SorunBildirPage(),
     const Scaffold(body: Center(child: Text('Profil'))),
   ];
 
