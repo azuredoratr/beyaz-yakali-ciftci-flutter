@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
+import 'bitki_detay.dart';
 
 class AnaEkranPage extends StatelessWidget {
   const AnaEkranPage({super.key});
@@ -17,7 +18,7 @@ class AnaEkranPage extends StatelessWidget {
               children: [
                 _buildHeader(),
                 _buildHavaDurumu(),
-                _buildBitkilerim(),
+                _buildBitkilerim(context),
                 _buildHaftalikGorevler(),
                 const SizedBox(height: 100),
               ],
@@ -168,7 +169,7 @@ class AnaEkranPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBitkilerim() {
+  Widget _buildBitkilerim(BuildContext context) {
     final bitkiler = [
       {'isim': 'Cherry Domates', 'asama': 'Büyüme Aşaması', 'yuzde': 0.72, 'renk': AppColors.buyume},
       {'isim': 'Salatalık', 'asama': 'Büyüme Aşaması', 'yuzde': 0.45, 'renk': AppColors.tarla},
@@ -210,7 +211,7 @@ class AnaEkranPage extends StatelessWidget {
             itemCount: bitkiler.length,
             itemBuilder: (context, index) {
               final bitki = bitkiler[index];
-              return _buildBitkiKarti(bitki);
+              return _buildBitkiKarti(context, bitki);
             },
           ),
         ),
@@ -218,70 +219,72 @@ class AnaEkranPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBitkiKarti(Map<String, dynamic> bitki) {
-    return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+  Widget _buildBitkiKarti(BuildContext context, Map<String, dynamic> bitki) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const BitkiDetayPage()),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Fotoğraf alanı
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Center(
-              child: Text(
-                '🌱',
-                style: const TextStyle(fontSize: 40),
+      child: Container(
+        width: 150,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: const Center(
+                child: Text('🌱', style: TextStyle(fontSize: 40)),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  bitki['isim'] as String,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  bitki['asama'] as String,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: bitki['yuzde'] as double,
-                    backgroundColor: AppColors.background,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      bitki['renk'] as Color,
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bitki['isim'] as String,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                    minHeight: 4,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  Text(
+                    bitki['asama'] as String,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(
+                      value: bitki['yuzde'] as double,
+                      backgroundColor: AppColors.background,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        bitki['renk'] as Color,
+                      ),
+                      minHeight: 4,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
