@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
 
@@ -11,88 +13,427 @@ class BitkiEklePage extends StatefulWidget {
 }
 
 class _BitkiEklePageState extends State<BitkiEklePage> {
-  String? _secilenBitki;
-  String? _secilenTur;
-  String _baslangic = 'tohum';
-  int _adim = 0;
+  Map<String, dynamic>? _bitkilerData;
+  Map<String, dynamic>? _secilenBitki;
+  Map<String, dynamic>? _secilenTur;
+  String? _baslangic;
+  String? _fideAlt;
+  String _ekimTarihi = '';
+  Map<String, dynamic>? _secilenBoy;
 
-  final List<Map<String, dynamic>> _bitkiler = [
-    {
-      'id': 'domates',
-      'isim': 'Domates',
-      'emoji': '🍅',
-      'turler': ['Cherry Domates', 'Silindir Domates', 'Beef Domates', 'Yumurta Domates'],
-    },
-    {
-      'id': 'biber',
-      'isim': 'Biber',
-      'emoji': '🌶️',
-      'turler': ['Kapya Biber', 'Sivri Biber', 'Dolmalık Biber', 'Carliston Biber'],
-    },
-    {
-      'id': 'salatalik',
-      'isim': 'Salatalık',
-      'emoji': '🥒',
-      'turler': ['Kıtır Salatalık', 'Bornova Salatalık', 'Mini Salatalık'],
-    },
-    {
-      'id': 'patlican',
-      'isim': 'Patlıcan',
-      'emoji': '🍆',
-      'turler': ['Kemer Patlıcan', 'Silindir Patlıcan', 'Baladi Patlıcan'],
-    },
-    {
-      'id': 'fasulye',
-      'isim': 'Fasulye',
-      'emoji': '🫘',
-      'turler': ['Taze Fasulye', 'Sırık Fasulye', 'Bodur Fasulye'],
-    },
-    {
-      'id': 'misir',
-      'isim': 'Mısır',
-      'emoji': '🌽',
-      'turler': ['Şeker Mısır', 'Cin Mısır', 'At Dişi Mısır'],
-    },
-    {
-      'id': 'kavun',
-      'isim': 'Kavun',
-      'emoji': '🍈',
-      'turler': ['Ananas Kavun', 'Kırkağaç Kavun', 'Cantaloup Kavun'],
-    },
-    {
-      'id': 'karpuz',
-      'isim': 'Karpuz',
-      'emoji': '🍉',
-      'turler': ['Crimson Sweet', 'Mini Karpuz', 'Sarı Karpuz'],
-    },
-    {
-      'id': 'kabak',
-      'isim': 'Kabak',
-      'emoji': '🥬',
-      'turler': ['Sakız Kabak', 'Bal Kabak', 'Zucchini'],
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _jsonYukle();
+  }
 
-  Map<String, dynamic>? get _secilenBitkiData =>
-      _bitkiler.firstWhere((b) => b['id'] == _secilenBitki, orElse: () => {});
+  Future<void> _jsonYukle() async {
+    final str = await rootBundle.loadString('lib/data/bitkiler.json');
+    setState(() => _bitkilerData = jsonDecode(str));
+  }
+
+  List<Map<String, dynamic>> get _bitkiler {
+    if (_bitkilerData == null) return [];
+    return (_bitkilerData!['bitkiler'] as Map)
+        .values
+        .map((v) => v as Map<String, dynamic>)
+        .toList();
+  }
+
+  List<Map<String, dynamic>> get _turler {
+    if (_secilenBitki == null) return [];
+    return (_secilenBitki!['alt_turler'] as List)
+        .map((v) => v as Map<String, dynamic>)
+        .toList();
+  }
+
+  List<Map<String, dynamic>> get _fideRehberi {
+    if (_secilenBitki == null) return [];
+    final rehber = _secilenBitki!['fide_boy_rehberi'];
+    if (rehber == null) return [];
+    return (rehber as List).map((v) => v as Map<String, dynamic>).toList();
+  }
+
+  int get _dikimHaftasi {
+    if (_secilenBitki == null) return 7;
+    return (_secilenBitki!['asama_sureleri']?['tohum_fide_hafta'] ?? 6) + 1;
+  }
+
+  int _haftaHesapla() {
+    if (_baslangic == 'tohum' && _ekimTarihi.isNotEmpty) {
+      final ekim = DateTime.parse(_ekimTarihi);
+      final fark = DateTime.now().difference(ekim).inDays;
+      return (fark / 7).floor() + 1;
+    }
+    if (_baslangic == 'fide') {
+      if (_fideAlt == 'boy' && _secilenBoy != null) {
+        return _secilenBoy!['hafta'] as int;
+      }
+      if (_fideAlt == 'tohum' && _ekimTarihi.isNotEmpty) {
+        final ekim = DateTime.parse(_ekimTarihi);
+        final fark = DateTime.now().difference(ekim).inDays;
+        return (fark / 7).floor() + 1;
+      }
+      if (_fideAlt == 'tarla') return _dikimHaftasi;
+    }
+    return 1;
+  }
+
+  bool get _hazirMi {
+    if (_secilenBitki == null || _secilenTur == null || _baslangic == null) return false;
+    if (_baslangic == 'tohum') return _ekimTarihi.isNotEmpty;
+    if (_baslangic == 'fide') {
+      if (_fideAlt == null) return false;
+      if (_fideAlt == 'boy') return _secilenBoy != null;
+      if (_fideAlt == 'tohum') return _ekimTarihi.isNotEmpty;
+      if (_fideAlt == 'tarla') return true;
+    }
+    return false;
+  }
+
+  void _bitkiEkle() {
+    if (!_hazirMi) return;
+    final hafta = _haftaHesapla();
+    final yeniBitki = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'bitki_id': _secilenBitki!['genel']['id'],
+      'ad': _secilenBitki!['genel']['ad'],
+      'tur': _secilenTur!['ad'],
+      'tur_id': _secilenTur!['id'],
+      'emoji': _secilenBitki!['genel']['emoji'],
+      'baslangic': _baslangic,
+      'ekim_tarihi': _ekimTarihi.isNotEmpty ? _ekimTarihi : DateTime.now().toIso8601String().split('T')[0],
+      'kayit_tarihi': DateTime.now().toIso8601String(),
+      'baslangic_hafta': hafta,
+      'hafta': hafta,
+    };
+    widget.onBitkiEklendi(yeniBitki);
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_bitkilerData == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(context),
-            _buildAdimGostergesi(),
             Expanded(
-              child: IndexedStack(
-                index: _adim,
-                children: [
-                  _buildAdim1(),
-                  _buildAdim2(),
-                  _buildAdim3(),
-                ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Sebze seç
+                    _buildSectionLabel('Sebze Seç'),
+                    const SizedBox(height: 8),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 2.2,
+                      ),
+                      itemCount: _bitkiler.length,
+                      itemBuilder: (context, index) {
+                        final bitki = _bitkiler[index];
+                        final secili = _secilenBitki?['genel']['id'] == bitki['genel']['id'];
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            _secilenBitki = bitki;
+                            _secilenTur = null;
+                            _baslangic = null;
+                            _fideAlt = null;
+                            _ekimTarihi = '';
+                            _secilenBoy = null;
+                          }),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: secili ? AppColors.primary.withOpacity(0.08) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: secili ? AppColors.primary : AppColors.cardBorder,
+                                width: secili ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(bitki['genel']['emoji'] ?? '🌱',
+                                    style: const TextStyle(fontSize: 20)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  bitki['genel']['ad'],
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 13,
+                                    fontWeight: secili ? FontWeight.bold : FontWeight.normal,
+                                    color: secili ? AppColors.primary : AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // 2. Çeşit seç
+                    if (_secilenBitki != null) ...[
+                      const SizedBox(height: 24),
+                      _buildSectionLabel('Çeşit Seç'),
+                      const SizedBox(height: 8),
+                      ..._turler.map((tur) {
+                        final secili = _secilenTur?['id'] == tur['id'];
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            _secilenTur = tur;
+                            _baslangic = null;
+                            _fideAlt = null;
+                            _ekimTarihi = '';
+                            _secilenBoy = null;
+                          }),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: secili ? AppColors.primary.withOpacity(0.08) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: secili ? AppColors.primary : AppColors.cardBorder,
+                                width: secili ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(tur['ad'] ?? '',
+                                    style: GoogleFonts.dmSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: secili ? AppColors.primary : AppColors.textPrimary,
+                                    )),
+                                if (tur['halk_adi'] != null &&
+                                    (tur['halk_adi'] as List).isNotEmpty)
+                                  Text(
+                                    (tur['halk_adi'] as List).join(', '),
+                                    style: GoogleFonts.dmSans(
+                                        fontSize: 11, color: AppColors.textSecondary),
+                                  ),
+                                if (tur['aciklama'] != null)
+                                  Text(
+                                    tur['aciklama'],
+                                    style: GoogleFonts.dmSans(
+                                        fontSize: 11, color: AppColors.textSecondary),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+
+                    // 3. Başlangıç noktası
+                    if (_secilenTur != null) ...[
+                      const SizedBox(height: 24),
+                      _buildSectionLabel('Başlangıç Noktası'),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: _buildBaslangicKart('tohum', '🌱', 'Tohumdan')),
+                          const SizedBox(width: 8),
+                          Expanded(child: _buildBaslangicKart('fide', '🪴', 'Fideden')),
+                        ],
+                      ),
+                    ],
+
+                    // 4a. Tohum tarihi
+                    if (_baslangic == 'tohum') ...[
+                      const SizedBox(height: 24),
+                      _buildSectionLabel('Tohumu Ne Zaman Ektin?'),
+                      const SizedBox(height: 8),
+                      _buildTarihSecici(),
+                      if (_ekimTarihi.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            '✓ Takvimin ${_haftaHesapla()}. haftadan başlayacak',
+                            style: GoogleFonts.dmSans(
+                                fontSize: 12, color: AppColors.primary),
+                          ),
+                        ),
+                    ],
+
+                    // 4b. Fide alt seçenekler
+                    if (_baslangic == 'fide') ...[
+                      const SizedBox(height: 24),
+                      _buildSectionLabel('Fiden Hakkında'),
+                      const SizedBox(height: 8),
+                      _buildFideAltKart('boy', '📏', 'Boy ölç — haftayı tahmin et',
+                          'Fideyi ölç, en yakın boya tıkla'),
+                      const SizedBox(height: 6),
+                      _buildFideAltKart('tohum', '📅', 'Tohum tarihini biliyorum',
+                          'Tohumlandığı tarihi seç, hafta otomatik hesaplanır'),
+                      const SizedBox(height: 6),
+                      _buildFideAltKart('tarla', '🌾', 'Tarlaya dikim aşamasından başla',
+                          'Önceki fide aşamaları atlanır, $_dikimHaftasi. haftadan başlar'),
+                    ],
+
+                    // 5a. Boy seçimi
+                    if (_baslangic == 'fide' &&
+                        _fideAlt == 'boy' &&
+                        _fideRehberi.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      _buildSectionLabel('Fideni Ölç'),
+                      const SizedBox(height: 8),
+                      ..._fideRehberi.map((secenek) {
+                        final secili = _secilenBoy?['hafta'] == secenek['hafta'];
+                        final ideal = secenek['durum'] == 'ideal';
+                        return GestureDetector(
+                          onTap: () => setState(() => _secilenBoy = secenek),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: secili
+                                  ? AppColors.primary.withOpacity(0.08)
+                                  : ideal
+                                      ? AppColors.secondary.withOpacity(0.05)
+                                      : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: secili
+                                    ? AppColors.primary
+                                    : ideal
+                                        ? AppColors.secondary.withOpacity(0.5)
+                                        : AppColors.cardBorder,
+                                width: secili ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      '~${secenek['boy_cm']} cm',
+                                      style: GoogleFonts.dmSans(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: secili
+                                            ? AppColors.primary
+                                            : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (ideal)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(99),
+                                        ),
+                                        child: Text('ideal',
+                                            style: GoogleFonts.dmSans(
+                                                fontSize: 10, color: Colors.white)),
+                                      ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${secenek['hafta']}. hafta',
+                                      style: GoogleFonts.dmSans(
+                                          fontSize: 11, color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(secenek['aciklama'] ?? '',
+                                    style: GoogleFonts.dmSans(
+                                        fontSize: 12, color: AppColors.textPrimary)),
+                                if (secenek['ortam_notu'] != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'ℹ️ ${secenek['ortam_notu']}',
+                                      style: GoogleFonts.dmSans(
+                                        fontSize: 10,
+                                        color: AppColors.textSecondary,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      if (_secilenBoy != null)
+                        Text(
+                          '✓ Takvimin ${_secilenBoy!['hafta']}. haftadan başlayacak',
+                          style: GoogleFonts.dmSans(
+                              fontSize: 12, color: AppColors.primary),
+                        ),
+                    ],
+
+                    // 5b. Fide + tohum tarihi
+                    if (_baslangic == 'fide' && _fideAlt == 'tohum') ...[
+                      const SizedBox(height: 24),
+                      _buildSectionLabel('Tohum Ekim Tarihi'),
+                      const SizedBox(height: 8),
+                      _buildTarihSecici(),
+                      if (_ekimTarihi.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            '✓ Takvimin ${_haftaHesapla()}. haftadan başlayacak',
+                            style: GoogleFonts.dmSans(
+                                fontSize: 12, color: AppColors.primary),
+                          ),
+                        ),
+                    ],
+
+                    // 5c. Tarlaya dikim mesajı
+                    if (_baslangic == 'fide' && _fideAlt == 'tarla') ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '✓ Takvimin $_dikimHaftasi. haftadan (tarlaya dikim) başlayacak',
+                        style: GoogleFonts.dmSans(
+                            fontSize: 12, color: AppColors.primary),
+                      ),
+                    ],
+
+                    // Ekle butonu
+                    if (_hazirMi) ...[
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _bitkiEkle,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text('Takvimi Oluştur ✓',
+                              style: GoogleFonts.dmSans(
+                                  fontSize: 15, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
           ],
@@ -107,13 +448,7 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () {
-              if (_adim > 0) {
-                setState(() => _adim--);
-              } else {
-                Navigator.pop(context);
-              }
-            },
+            onTap: () => Navigator.pop(context),
             child: Container(
               width: 42,
               height: 42,
@@ -122,312 +457,152 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.cardBorder),
               ),
-              child: const Icon(Icons.arrow_back, size: 20, color: AppColors.textPrimary),
+              child: const Icon(Icons.arrow_back, size: 20),
             ),
           ),
           const SizedBox(width: 16),
-          Text(
-            _adim == 0 ? 'Bitki Seç' : _adim == 1 ? 'Tür Seç' : 'Başlangıç',
-            style: GoogleFonts.dmSans(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          Text('Bitki Ekle',
+              style: GoogleFonts.dmSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
         ],
       ),
     );
   }
 
-  Widget _buildAdimGostergesi() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (i) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: i == _adim ? 24 : 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: i <= _adim ? AppColors.primary : AppColors.cardBorder,
-              borderRadius: BorderRadius.circular(99),
-            ),
-          );
-        }),
+  Widget _buildSectionLabel(String label) {
+    return Text(
+      label.toUpperCase(),
+      style: GoogleFonts.dmSans(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textSecondary,
+        letterSpacing: 0.5,
       ),
     );
   }
 
-  Widget _buildAdim1() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hangi bitkiyi ekleyeceksin?',
-            style: GoogleFonts.dmSans(
-              fontSize: 15,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 1,
-              ),
-              itemCount: _bitkiler.length,
-              itemBuilder: (context, index) {
-                final bitki = _bitkiler[index];
-                final secili = _secilenBitki == bitki['id'];
-                return GestureDetector(
-                  onTap: () => setState(() => _secilenBitki = bitki['id'] as String),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: secili ? AppColors.primary.withOpacity(0.1) : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: secili ? AppColors.primary : AppColors.cardBorder,
-                        width: secili ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(bitki['emoji'] as String, style: const TextStyle(fontSize: 32)),
-                        const SizedBox(height: 6),
-                        Text(
-                          bitki['isim'] as String,
-                          style: GoogleFonts.dmSans(
-                            fontSize: 12,
-                            fontWeight: secili ? FontWeight.w600 : FontWeight.normal,
-                            color: secili ? AppColors.primary : AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _secilenBitki != null ? () => setState(() => _adim = 1) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.cardBorder,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(
-                'Devam et →',
-                style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdim2() {
-    final turler = (_secilenBitkiData?['turler'] as List?)?.cast<String>() ?? [];
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hangi türü ekleyeceksin?',
-            style: GoogleFonts.dmSans(fontSize: 15, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: turler.length,
-              itemBuilder: (context, index) {
-                final tur = turler[index];
-                final secili = _secilenTur == tur;
-                return GestureDetector(
-                  onTap: () => setState(() => _secilenTur = tur),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: secili ? AppColors.primary.withOpacity(0.1) : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: secili ? AppColors.primary : AppColors.cardBorder,
-                        width: secili ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          _secilenBitkiData?['emoji'] as String? ?? '🌱',
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            tur,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14,
-                              fontWeight: secili ? FontWeight.w600 : FontWeight.normal,
-                              color: secili ? AppColors.primary : AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        if (secili)
-                          const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _secilenTur != null ? () => setState(() => _adim = 2) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.cardBorder,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(
-                'Devam et →',
-                style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdim3() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Nereden başlıyorsun?',
-            style: GoogleFonts.dmSans(fontSize: 15, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 20),
-          _buildBaslangicKarti(
-            'tohum',
-            '🌱',
-            'Tohumdan başlıyorum',
-            'Henüz toprağa ektim veya ekeceksiniz',
-          ),
-          const SizedBox(height: 10),
-          _buildBaslangicKarti(
-            'fide',
-            '🪴',
-            'Fide aldım',
-            'Hazır fide satın aldım',
-          ),
-          const SizedBox(height: 10),
-          _buildBaslangicKarti(
-            'tarla',
-            '🌿',
-            'Tarlaya diktim',
-            'Fideyi yerine diktim',
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                final yeniBitki = {
-                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                  'bitki_id': _secilenBitki,
-                  'isim': _secilenBitkiData?['isim'],
-                  'tur': _secilenTur,
-                  'emoji': _secilenBitkiData?['emoji'],
-                  'hafta': 1,
-                  'baslangic': _baslangic,
-                  'kayit_tarihi': DateTime.now().toIso8601String(),
-                };
-                widget.onBitkiEklendi(yeniBitki);
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(
-                'Bitkimi Ekle 🌱',
-                style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBaslangicKarti(String deger, String emoji, String baslik, String aciklama) {
+  Widget _buildBaslangicKart(String deger, String emoji, String baslik) {
     final secili = _baslangic == deger;
     return GestureDetector(
-      onTap: () => setState(() => _baslangic = deger),
+      onTap: () => setState(() {
+        _baslangic = deger;
+        _fideAlt = null;
+        _ekimTarihi = '';
+        _secilenBoy = null;
+      }),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: secili ? AppColors.primary.withOpacity(0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: secili ? AppColors.primary : AppColors.cardBorder,
-            width: secili ? 1.5 : 1,
+            width: secili ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 28)),
+            const SizedBox(height: 6),
+            Text(baslik,
+                style: GoogleFonts.dmSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: secili ? AppColors.primary : AppColors.textPrimary,
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFideAltKart(
+      String deger, String emoji, String baslik, String aciklama) {
+    final secili = _fideAlt == deger;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _fideAlt = deger;
+        _ekimTarihi = '';
+        _secilenBoy = null;
+      }),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: secili ? AppColors.primary.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: secili ? AppColors.primary : AppColors.cardBorder,
+            width: secili ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 14),
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    baslik,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: secili ? AppColors.primary : AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    aciklama,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  Text(baslik,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: secili ? AppColors.primary : AppColors.textPrimary,
+                      )),
+                  Text(aciklama,
+                      style: GoogleFonts.dmSans(
+                          fontSize: 11, color: AppColors.textSecondary)),
                 ],
               ),
             ),
-            if (secili)
-              const Icon(Icons.check_circle, color: AppColors.primary, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTarihSecici() {
+    return GestureDetector(
+      onTap: () async {
+        final secilen = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+        );
+        if (secilen != null) {
+          setState(() =>
+              _ekimTarihi = secilen.toIso8601String().split('T')[0]);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _ekimTarihi.isNotEmpty
+                ? AppColors.primary
+                : AppColors.cardBorder,
+            width: _ekimTarihi.isNotEmpty ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_outlined,
+                size: 18, color: AppColors.textSecondary),
+            const SizedBox(width: 10),
+            Text(
+              _ekimTarihi.isNotEmpty ? _ekimTarihi : 'Tarih seç...',
+              style: GoogleFonts.dmSans(
+                fontSize: 14,
+                color: _ekimTarihi.isNotEmpty
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
+              ),
+            ),
           ],
         ),
       ),

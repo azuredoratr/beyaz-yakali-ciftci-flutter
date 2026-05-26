@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'pages/ana_ekran.dart';
 import 'pages/takvim.dart';
 import 'pages/sorun_bildir.dart';
 import 'pages/onboarding.dart';
+import 'services/tercihler_servisi.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarBrightness: Brightness.dark,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.transparent,
+  ));
   runApp(const BeyazYakaliCiftciApp());
 }
 
@@ -26,6 +35,14 @@ class BeyazYakaliCiftciApp extends StatelessWidget {
         cardColor: Colors.white,
         useMaterial3: true,
         textTheme: GoogleFonts.dmSansTextTheme(),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+          ),
+        ),
       ),
       home: const GirisKontrol(),
     );
@@ -33,7 +50,7 @@ class BeyazYakaliCiftciApp extends StatelessWidget {
 }
 
 class AppColors {
-  static const background = Color(0xFFF5F2EC);
+  static const background = Color(0xFFFFFFFF);
   static const surface = Colors.white;
   static const primary = Color(0xFF2D5A27);
   static const secondary = Color(0xFF7A9A3A);
@@ -58,11 +75,25 @@ class GirisKontrol extends StatefulWidget {
 }
 
 class _GirisKontrolState extends State<GirisKontrol> {
-  bool _onboardingTamamlandi = false;
+  bool? _onboardingTamamlandi;
+
+  @override
+  void initState() {
+    super.initState();
+    _kontrol();
+  }
+
+  Future<void> _kontrol() async {
+    final tamamlandi = await TercihlerServisi.onboardingTamamlandiMi();
+    setState(() => _onboardingTamamlandi = tamamlandi);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!_onboardingTamamlandi) {
+    if (_onboardingTamamlandi == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_onboardingTamamlandi!) {
       return OnboardingPage(
         onTamamla: () => setState(() => _onboardingTamamlandi = true),
       );
@@ -92,19 +123,16 @@ class _AnaSayfaState extends State<AnaSayfa> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _sayfalar[_secilenIndex],
+  extendBody: true,
+  extendBodyBehindAppBar: true,
+  backgroundColor: AppColors.background,
+  body: _sayfalar[_secilenIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: AppColors.cardBorder, width: 1),
-          ),
+          color: Colors.white.withOpacity(0.95),
+          border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)),
           ],
         ),
         child: SafeArea(
@@ -139,20 +167,13 @@ class _AnaSayfaState extends State<AnaSayfa> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              size: 22,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ),
+            Icon(isSelected ? activeIcon : icon, size: 22, color: isSelected ? AppColors.primary : AppColors.textSecondary),
             const SizedBox(height: 3),
-            Text(
-              label,
-              style: GoogleFonts.dmSans(
-                fontSize: 10,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
+            Text(label, style: GoogleFonts.dmSans(
+              fontSize: 10,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            )),
           ],
         ),
       ),

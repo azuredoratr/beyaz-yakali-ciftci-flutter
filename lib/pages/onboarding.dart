@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
+import '../services/tercihler_servisi.dart';
+
 
 class OnboardingPage extends StatefulWidget {
   final VoidCallback onTamamla;
@@ -327,7 +329,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _secilenBahce.isNotEmpty ? widget.onTamamla : null,
+              onPressed: _secilenBahce.isNotEmpty ? () async {
+  await TercihlerServisi.sehirKaydet(_secilenSehir);
+  await TercihlerServisi.bahceTipiKaydet(_secilenBahce);
+  widget.onTamamla();
+} : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
