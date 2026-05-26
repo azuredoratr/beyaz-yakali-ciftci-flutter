@@ -7,6 +7,7 @@ import '../main.dart';
 import '../services/tercihler_servisi.dart';
 import 'bitki_ekle.dart';
 import 'bitki_detay.dart';
+import '../services/bitki_servisi.dart';
 
 const Map<String, String> turFotografMap = {
   'salkım': 'assets/images/salkım_domates.png',
@@ -124,11 +125,8 @@ class AnaEkranPage extends StatefulWidget {
 }
 
 class _AnaEkranPageState extends State<AnaEkranPage> {
-  List<Map<String, dynamic>> _bitkiler = [
-    {'id': '1', 'bitki_id': 'domates', 'ad': 'Domates', 'tur': 'Cherry Domates', 'tur_id': 'cherry', 'emoji': '🍅', 'hafta': 7, 'yuzde': 0.72},
-    {'id': '2', 'bitki_id': 'salatalik', 'ad': 'Salatalık', 'tur': 'Sofralık Salatalık', 'tur_id': 'sofralik', 'emoji': '🥒', 'hafta': 4, 'yuzde': 0.45},
-    {'id': '3', 'bitki_id': 'fasulye', 'ad': 'Fasulye', 'tur': 'Sırık Fasulye', 'tur_id': 'sirik', 'emoji': '🫘', 'hafta': 10, 'yuzde': 0.90},
-  ];
+  List<Map<String, dynamic>> _bitkiler = [];
+bool _bitkilerYukleniyor = true;
 
   Map<String, dynamic>? _hava;
   bool _havaYukleniyor = true;
@@ -144,9 +142,12 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
   Future<void> _tercihlerYukle() async {
     final sehir = await TercihlerServisi.sehirGetir();
     final bahce = await TercihlerServisi.bahceTipiGetir();
+    final bitkiler = await BitkiServisi.bitkileriGuncelleVeGetir();
     setState(() {
       _sehir = sehir;
       _bahceTipi = bahce;
+      _bitkiler = bitkiler;
+      _bitkilerYukleniyor = false;
     });
     _havaGetir();
   }
@@ -244,7 +245,11 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
               _buildIconBtn(Icons.add, () {
                 Navigator.push(context, MaterialPageRoute(
                   builder: (_) => BitkiEklePage(
-                    onBitkiEklendi: (yeni) => setState(() => _bitkiler.add(yeni)),
+                    onBitkiEklendi: (yeni) async {
+  await BitkiServisi.bitkiEkle(yeni);
+  final liste = await BitkiServisi.bitkileriGuncelleVeGetir();
+  setState(() => _bitkiler = liste);
+},
                   ),
                 ));
               }, filled: true),
@@ -536,7 +541,11 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
   Widget _buildEkleKarti() {
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(
-        builder: (_) => BitkiEklePage(onBitkiEklendi: (yeni) => setState(() => _bitkiler.add(yeni))),
+        builder: (_) => BitkiEklePage(onBitkiEklendi: (yeni) async {
+  await BitkiServisi.bitkiEkle(yeni);
+  final liste = await BitkiServisi.bitkileriGuncelleVeGetir();
+  setState(() => _bitkiler = liste);
+},),
       )),
       child: Container(
         width: 110,
