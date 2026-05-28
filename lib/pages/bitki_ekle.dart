@@ -34,17 +34,12 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
 
   List<Map<String, dynamic>> get _bitkiler {
     if (_bitkilerData == null) return [];
-    return (_bitkilerData!['bitkiler'] as Map)
-        .values
-        .map((v) => v as Map<String, dynamic>)
-        .toList();
+    return (_bitkilerData!['bitkiler'] as Map).values.map((v) => v as Map<String, dynamic>).toList();
   }
 
   List<Map<String, dynamic>> get _turler {
     if (_secilenBitki == null) return [];
-    return (_secilenBitki!['alt_turler'] as List)
-        .map((v) => v as Map<String, dynamic>)
-        .toList();
+    return (_secilenBitki!['alt_turler'] as List).map((v) => v as Map<String, dynamic>).toList();
   }
 
   List<Map<String, dynamic>> get _fideRehberi {
@@ -66,9 +61,7 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
       return (fark / 7).floor() + 1;
     }
     if (_baslangic == 'fide') {
-      if (_fideAlt == 'boy' && _secilenBoy != null) {
-        return _secilenBoy!['hafta'] as int;
-      }
+      if (_fideAlt == 'boy' && _secilenBoy != null) return _secilenBoy!['hafta'] as int;
       if (_fideAlt == 'tohum' && _ekimTarihi.isNotEmpty) {
         final ekim = DateTime.parse(_ekimTarihi);
         final fark = DateTime.now().difference(ekim).inDays;
@@ -79,23 +72,17 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
     return 1;
   }
 
-  // Ekim tarihini geriye hesapla — Firebase geçişinde de aynı mantık
   String _hesaplaEkimTarihi() {
     if (_ekimTarihi.isNotEmpty) return _ekimTarihi;
-
-    // Fide — boy seçildiyse geriye hesapla
     if (_baslangic == 'fide' && _fideAlt == 'boy' && _secilenBoy != null) {
       final hafta = _secilenBoy!['hafta'] as int;
       final ekim = DateTime.now().subtract(Duration(days: hafta * 7));
       return ekim.toIso8601String().split('T')[0];
     }
-
-    // Fide — tarlaya dikim
     if (_baslangic == 'fide' && _fideAlt == 'tarla') {
       final ekim = DateTime.now().subtract(Duration(days: _dikimHaftasi * 7));
       return ekim.toIso8601String().split('T')[0];
     }
-
     return DateTime.now().toIso8601String().split('T')[0];
   }
 
@@ -115,7 +102,6 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
     if (!_hazirMi) return;
     final baslangicHafta = _haftaHesapla();
     final ekimTarihi = _hesaplaEkimTarihi();
-
     final yeniBitki = {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'bitki_id': _secilenBitki!['genel']['id'],
@@ -139,7 +125,6 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
     if (_bitkilerData == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -166,12 +151,8 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                         final secili = _secilenBitki?['genel']['id'] == bitki['genel']['id'];
                         return GestureDetector(
                           onTap: () => setState(() {
-                            _secilenBitki = bitki;
-                            _secilenTur = null;
-                            _baslangic = null;
-                            _fideAlt = null;
-                            _ekimTarihi = '';
-                            _secilenBoy = null;
+                            _secilenBitki = bitki; _secilenTur = null; _baslangic = null;
+                            _fideAlt = null; _ekimTarihi = ''; _secilenBoy = null;
                           }),
                           child: Container(
                             decoration: BoxDecoration(
@@ -191,7 +172,6 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                         );
                       },
                     ),
-
                     if (_secilenBitki != null) ...[
                       const SizedBox(height: 24),
                       _buildSectionLabel('Çeşit Seç'),
@@ -199,13 +179,7 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                       ..._turler.map((tur) {
                         final secili = _secilenTur?['id'] == tur['id'];
                         return GestureDetector(
-                          onTap: () => setState(() {
-                            _secilenTur = tur;
-                            _baslangic = null;
-                            _fideAlt = null;
-                            _ekimTarihi = '';
-                            _secilenBoy = null;
-                          }),
+                          onTap: () => setState(() { _secilenTur = tur; _baslangic = null; _fideAlt = null; _ekimTarihi = ''; _secilenBoy = null; }),
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 6),
                             padding: const EdgeInsets.all(12),
@@ -228,32 +202,24 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                         );
                       }),
                     ],
-
                     if (_secilenTur != null) ...[
                       const SizedBox(height: 24),
                       _buildSectionLabel('Başlangıç Noktası'),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(child: _buildBaslangicKart('tohum', '🌱', 'Tohumdan')),
-                          const SizedBox(width: 8),
-                          Expanded(child: _buildBaslangicKart('fide', '🪴', 'Fideden')),
-                        ],
-                      ),
+                      Row(children: [
+                        Expanded(child: _buildBaslangicKart('tohum', '🌱', 'Tohumdan')),
+                        const SizedBox(width: 8),
+                        Expanded(child: _buildBaslangicKart('fide', '🪴', 'Fideden')),
+                      ]),
                     ],
-
                     if (_baslangic == 'tohum') ...[
                       const SizedBox(height: 24),
                       _buildSectionLabel('Tohumu Ne Zaman Ektin?'),
                       const SizedBox(height: 8),
                       _buildTarihSecici(),
                       if (_ekimTarihi.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text('✓ Takvimin ${_haftaHesapla()}. haftadan başlayacak', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.primary)),
-                        ),
+                        Padding(padding: const EdgeInsets.only(top: 8), child: Text('✓ Takvimin ${_haftaHesapla()}. haftadan başlayacak', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.primary))),
                     ],
-
                     if (_baslangic == 'fide') ...[
                       const SizedBox(height: 24),
                       _buildSectionLabel('Fiden Hakkında'),
@@ -264,7 +230,6 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                       const SizedBox(height: 6),
                       _buildFideAltKart('tarla', '🌾', 'Tarlaya dikim aşamasından başla', 'Önceki fide aşamaları atlanır, $_dikimHaftasi. haftadan başlar'),
                     ],
-
                     if (_baslangic == 'fide' && _fideAlt == 'boy' && _fideRehberi.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       _buildSectionLabel('Fideni Ölç'),
@@ -285,15 +250,13 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Text('~${secenek['boy_cm']} cm', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.bold, color: secili ? AppColors.primary : AppColors.textPrimary)),
-                                    const Spacer(),
-                                    if (ideal) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(99)), child: Text('ideal', style: GoogleFonts.dmSans(fontSize: 10, color: Colors.white))),
-                                    const SizedBox(width: 6),
-                                    Text('${secenek['hafta']}. hafta', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
-                                  ],
-                                ),
+                                Row(children: [
+                                  Text('~${secenek['boy_cm']} cm', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.bold, color: secili ? AppColors.primary : AppColors.textPrimary)),
+                                  const Spacer(),
+                                  if (ideal) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(99)), child: Text('ideal', style: GoogleFonts.dmSans(fontSize: 10, color: Colors.white))),
+                                  const SizedBox(width: 6),
+                                  Text('${secenek['hafta']}. hafta', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+                                ]),
                                 const SizedBox(height: 4),
                                 Text(secenek['aciklama'] ?? '', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textPrimary)),
                                 if (secenek['ortam_notu'] != null)
@@ -306,24 +269,18 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                       if (_secilenBoy != null)
                         Text('✓ Takvimin ${_secilenBoy!['hafta']}. haftadan başlayacak', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.primary)),
                     ],
-
                     if (_baslangic == 'fide' && _fideAlt == 'tohum') ...[
                       const SizedBox(height: 24),
                       _buildSectionLabel('Tohum Ekim Tarihi'),
                       const SizedBox(height: 8),
                       _buildTarihSecici(),
                       if (_ekimTarihi.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text('✓ Takvimin ${_haftaHesapla()}. haftadan başlayacak', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.primary)),
-                        ),
+                        Padding(padding: const EdgeInsets.only(top: 8), child: Text('✓ Takvimin ${_haftaHesapla()}. haftadan başlayacak', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.primary))),
                     ],
-
                     if (_baslangic == 'fide' && _fideAlt == 'tarla') ...[
                       const SizedBox(height: 8),
                       Text('✓ Takvimin $_dikimHaftasi. haftadan (tarlaya dikim) başlayacak', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.primary)),
                     ],
-
                     if (_hazirMi) ...[
                       const SizedBox(height: 24),
                       SizedBox(
@@ -331,8 +288,7 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                         child: ElevatedButton(
                           onPressed: _bitkiEkle,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.primary, foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -340,7 +296,6 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
                         ),
                       ),
                     ],
-
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -359,11 +314,7 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.cardBorder)),
-              child: const Icon(Icons.arrow_back, size: 20),
-            ),
+            child: Container(width: 42, height: 42, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.cardBorder)), child: const Icon(Icons.arrow_back, size: 20)),
           ),
           const SizedBox(width: 16),
           Text('Bitki Ekle', style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
@@ -387,13 +338,11 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: secili ? AppColors.primary : AppColors.cardBorder, width: secili ? 2 : 1),
         ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(height: 6),
-            Text(baslik, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.bold, color: secili ? AppColors.primary : AppColors.textPrimary)),
-          ],
-        ),
+        child: Column(children: [
+          Text(emoji, style: const TextStyle(fontSize: 28)),
+          const SizedBox(height: 6),
+          Text(baslik, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.bold, color: secili ? AppColors.primary : AppColors.textPrimary)),
+        ]),
       ),
     );
   }
@@ -409,21 +358,14 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: secili ? AppColors.primary : AppColors.cardBorder, width: secili ? 2 : 1),
         ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(baslik, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.bold, color: secili ? AppColors.primary : AppColors.textPrimary)),
-                  Text(aciklama, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-          ],
-        ),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(baslik, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.bold, color: secili ? AppColors.primary : AppColors.textPrimary)),
+            Text(aciklama, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+          ])),
+        ]),
       ),
     );
   }
@@ -431,15 +373,8 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
   Widget _buildTarihSecici() {
     return GestureDetector(
       onTap: () async {
-        final secilen = await showDatePicker(
-          context: context,
-          initialDate: DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-        );
-        if (secilen != null) {
-          setState(() => _ekimTarihi = secilen.toIso8601String().split('T')[0]);
-        }
+        final secilen = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
+        if (secilen != null) setState(() => _ekimTarihi = secilen.toIso8601String().split('T')[0]);
       },
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -448,13 +383,11 @@ class _BitkiEklePageState extends State<BitkiEklePage> {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: _ekimTarihi.isNotEmpty ? AppColors.primary : AppColors.cardBorder, width: _ekimTarihi.isNotEmpty ? 2 : 1),
         ),
-        child: Row(
-          children: [
-            const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textSecondary),
-            const SizedBox(width: 10),
-            Text(_ekimTarihi.isNotEmpty ? _ekimTarihi : 'Tarih seç...', style: GoogleFonts.dmSans(fontSize: 14, color: _ekimTarihi.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary)),
-          ],
-        ),
+        child: Row(children: [
+          const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 10),
+          Text(_ekimTarihi.isNotEmpty ? _ekimTarihi : 'Tarih seç...', style: GoogleFonts.dmSans(fontSize: 14, color: _ekimTarihi.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary)),
+        ]),
       ),
     );
   }

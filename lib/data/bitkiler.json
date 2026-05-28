@@ -682,7 +682,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "silindir",
@@ -696,7 +697,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "cherry",
@@ -710,7 +712,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum var. cerasiforme"
         },
         {
           "id": "beef",
@@ -723,7 +726,8 @@
           "baslangic_noktasi": [
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "pembe",
@@ -737,7 +741,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "ayas",
@@ -749,7 +754,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "yumurta",
@@ -763,7 +769,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "datca",
@@ -776,7 +783,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum lycopersicum"
         },
         {
           "id": "jenerik",
@@ -1356,7 +1364,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "carliston",
@@ -1370,7 +1379,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "kapya",
@@ -1385,7 +1395,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "dolmalik",
@@ -1400,7 +1411,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "aci",
@@ -1415,7 +1427,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "cin",
@@ -1429,7 +1442,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "egzotik_aci",
@@ -1445,7 +1459,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum chinense"
         },
         {
           "id": "jenerik",
@@ -2129,7 +2144,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis sativus"
         },
         {
           "id": "tursulik",
@@ -2144,7 +2160,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis sativus"
         },
         {
           "id": "bodur",
@@ -2159,7 +2176,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis sativus"
         },
         {
           "id": "acur",
@@ -2173,7 +2191,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis flexuosus"
         },
         {
           "id": "jenerik",
@@ -2721,7 +2740,8 @@
           "baslangic_noktasi": [
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum melongena"
         },
         {
           "id": "bostan",
@@ -2735,7 +2755,8 @@
           "baslangic_noktasi": [
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum melongena"
         },
         {
           "id": "halkapinar",
@@ -2747,7 +2768,8 @@
           "baslangic_noktasi": [
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum melongena"
         },
         {
           "id": "aydın_siyahi",
@@ -2761,7 +2783,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum melongena"
         },
         {
           "id": "kirmasti",
@@ -2773,7 +2796,8 @@
           "baslangic_noktasi": [
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Solanum melongena"
         },
         {
           "id": "jenerik",
@@ -3461,7 +3485,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis sativus"
         },
         {
           "id": "sirik",
@@ -3475,7 +3500,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Phaseolus vulgaris"
         },
         {
           "id": "ayse_kadin",
@@ -3488,7 +3514,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Phaseolus vulgaris"
         },
         {
           "id": "jenerik",
@@ -3852,7 +3879,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Zea mays var. saccharata"
         },
         {
           "id": "cin",
@@ -3865,7 +3893,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Capsicum annuum"
         },
         {
           "id": "jenerik",
@@ -4276,7 +4305,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis melo"
         },
         {
           "id": "yuva",
@@ -4290,7 +4320,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis melo"
         },
         {
           "id": "cantaloup",
@@ -4304,7 +4335,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucumis melo var. cantalupensis"
         },
         {
           "id": "jenerik",
@@ -4736,7 +4768,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Citrullus lanatus"
         },
         {
           "id": "yuvarlak",
@@ -4750,7 +4783,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Citrullus lanatus"
         },
         {
           "id": "mini",
@@ -4765,7 +4799,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Citrullus lanatus"
         },
         {
           "id": "tohumsuz",
@@ -4777,7 +4812,8 @@
           "baslangic_noktasi": [
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Citrullus lanatus"
         },
         {
           "id": "jenerik",
@@ -5242,7 +5278,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucurbita pepo"
         },
         {
           "id": "bal",
@@ -5256,7 +5293,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucurbita moschata"
         },
         {
           "id": "balkabagi",
@@ -5270,7 +5308,8 @@
           "baslangic_noktasi": [
             "tohum"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucurbita maxima"
         },
         {
           "id": "zucchini",
@@ -5284,7 +5323,8 @@
             "tohum",
             "fide"
           ],
-          "fotograf_url": ""
+          "fotograf_url": "",
+          "latince": "Cucurbita pepo var. cylindrica"
         },
         {
           "id": "jenerik",
