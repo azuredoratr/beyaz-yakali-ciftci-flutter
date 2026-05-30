@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../main.dart';
 import '../services/tercihler_servisi.dart';
+import '../services/bitki_servisi.dart';
 import 'bitki_ekle.dart';
 import 'bitki_detay.dart';
-import '../services/bitki_servisi.dart';
 
 const Map<String, String> turFotografMap = {
   'salkım': 'assets/images/salkım_domates.png',
@@ -37,6 +36,7 @@ const Map<String, String> turFotografMap = {
   'sirik': 'assets/images/sirik_fasulye.png',
   'ayse_kadin': 'assets/images/aysekadin_fasulyesi.png',
   'seker': 'assets/images/seker_misiri.png',
+  'cin_misir': 'assets/images/cin_misiri.png',
   'kirkagac': 'assets/images/kirkaagac_kavunu.png',
   'yuva': 'assets/images/yuva_kavunu.png',
   'cantaloup': 'assets/images/kantalup_kavun.png',
@@ -50,27 +50,35 @@ const Map<String, String> turFotografMap = {
   'zucchini': 'assets/images/zucchini.png',
 };
 
-const Map<String, Map<String, double>> sehirKoordinatlar = {
-  'Adana': {'lat': 37.00, 'lon': 35.32},
-  'Ankara': {'lat': 39.93, 'lon': 32.85},
-  'Antalya': {'lat': 36.90, 'lon': 30.70},
-  'Bursa': {'lat': 40.18, 'lon': 29.06},
-  'Diyarbakır': {'lat': 37.91, 'lon': 40.23},
-  'Eskişehir': {'lat': 39.78, 'lon': 30.52},
-  'Gaziantep': {'lat': 37.06, 'lon': 37.38},
-  'İstanbul': {'lat': 41.01, 'lon': 28.97},
-  'İzmir': {'lat': 38.42, 'lon': 27.14},
-  'Kayseri': {'lat': 38.73, 'lon': 35.49},
-  'Konya': {'lat': 37.87, 'lon': 32.49},
-  'Mersin': {'lat': 36.80, 'lon': 34.63},
-  'Samsun': {'lat': 41.29, 'lon': 36.33},
-  'Trabzon': {'lat': 41.00, 'lon': 39.72},
-  'Van': {'lat': 38.50, 'lon': 43.38},
-};
-
 String? turFotografGetir(String? turId) {
   if (turId == null) return null;
   return turFotografMap[turId];
+}
+
+String heroImajGetir(String bahceTipi) {
+  final saat = DateTime.now().hour;
+  final String zaman;
+  if (saat >= 5 && saat < 11) {
+    zaman = 'sabah';
+  } else if (saat >= 11 && saat < 16) {
+    zaman = 'oglen';
+  } else if (saat >= 16 && saat < 20) {
+    zaman = 'aksam';
+  } else {
+    zaman = 'gece';
+  }
+
+  final String tip;
+  final bt = bahceTipi.toLowerCase();
+  if (bt.contains('tarla') || bt.contains('arazi')) {
+    tip = 'tarla';
+  } else if (bt.contains('saksı') || bt.contains('saksi') || bt.contains('balkon') || bt.contains('ev')) {
+    tip = 'saksi';
+  } else {
+    tip = 'bahce';
+  }
+
+  return 'assets/images/hero_${tip}_$zaman.png';
 }
 
 String havaDurumuEmoji(int kod) {
@@ -78,8 +86,7 @@ String havaDurumuEmoji(int kod) {
   if (kod <= 3) return '⛅';
   if (kod <= 48) return '☁️';
   if (kod <= 67) return '🌧️';
-  if (kod <= 77) return '🌨️';
-  if (kod <= 82) return '🌦️';
+  if (kod <= 77) return '❄️';
   return '⛈️';
 }
 
@@ -89,33 +96,36 @@ String havaDurumuMetin(int kod) {
   if (kod <= 48) return 'Bulutlu';
   if (kod <= 67) return 'Yağmurlu';
   if (kod <= 77) return 'Karlı';
-  if (kod <= 82) return 'Sağanak';
   return 'Fırtınalı';
 }
 
-String gunAdi(String tarih) {
-  final dt = DateTime.parse(tarih);
-  const gunler = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-  return gunler[dt.weekday - 1];
-}
-
 String akilliOneri(Map<String, dynamic> hava, String bahceTipi) {
-  final current = hava['current'];
-  final daily = hava['daily'];
-  final kod = current['weathercode'] as int;
-  final maxSicaklik = (daily['temperature_2m_max'][0] as num).toDouble();
-  final minSicaklik = (daily['temperature_2m_min'][0] as num).toDouble();
-  final yagmurlu = kod >= 51;
-  final cokSicak = maxSicaklik > 35;
-  final donRiski = minSicaklik < 5;
-  final tarla = bahceTipi.contains('Tarla') || bahceTipi.contains('Arazi');
-
-  if (donRiski) return '❄️ Don riski var! Fideleri içeri al, hassas bitkileri koru.';
-  if (yagmurlu && tarla) return '🌧️ Yağmur var — tarlada sulama gerekmez, doğal yağış yeterli.';
-  if (yagmurlu && !tarla) return '🌧️ Yağmur var — balkon/saksı bitkilerini sulamayı atla.';
-  if (cokSicak) return '🌡️ Çok sıcak! Sabah erken sula, öğlen sulama yapma.';
-  return '✅ Bahçe bakımı için güzel bir gün!';
+  final c = hava['current'];
+  final kod = c['weathercode'] as int;
+  final sicaklik = (c['temperature_2m'] as num).toDouble();
+  if (sicaklik < 2) return 'Don riski var!';
+  if (kod >= 51 && kod <= 67) return 'Yağmur bekleniyor, sulama gerek yok.';
+  if (sicaklik > 34) return 'Çok sıcak, sabah erken sulama önerilir.';
+  return 'Bahçe bakımı için güzel bir gün!';
 }
+
+const Map<String, Map<String, double>> sehirKoordinatlar = {
+  'Ankara': {'lat': 39.93, 'lon': 32.85},
+  'İstanbul': {'lat': 41.01, 'lon': 28.95},
+  'İzmir': {'lat': 38.42, 'lon': 27.14},
+  'Antalya': {'lat': 36.90, 'lon': 30.70},
+  'Bursa': {'lat': 40.18, 'lon': 29.06},
+  'Eskişehir': {'lat': 39.78, 'lon': 30.52},
+  'Konya': {'lat': 37.87, 'lon': 32.49},
+  'Adana': {'lat': 37.00, 'lon': 35.32},
+  'Gaziantep': {'lat': 37.06, 'lon': 37.38},
+  'Mersin': {'lat': 36.80, 'lon': 34.63},
+  'Diyarbakır': {'lat': 37.91, 'lon': 40.23},
+  'Kayseri': {'lat': 38.73, 'lon': 35.49},
+  'Samsun': {'lat': 41.29, 'lon': 36.33},
+  'Trabzon': {'lat': 41.00, 'lon': 39.72},
+  'Van': {'lat': 38.50, 'lon': 43.38},
+};
 
 class AnaEkranPage extends StatefulWidget {
   const AnaEkranPage({super.key});
@@ -126,20 +136,18 @@ class AnaEkranPage extends StatefulWidget {
 
 class _AnaEkranPageState extends State<AnaEkranPage> {
   List<Map<String, dynamic>> _bitkiler = [];
-bool _bitkilerYukleniyor = true;
-
   Map<String, dynamic>? _hava;
   bool _havaYukleniyor = true;
   String _sehir = 'Ankara';
-  String _bahceTipi = 'Hobi Bahçesi';
+  String _bahceTipi = 'bahce';
 
   @override
   void initState() {
     super.initState();
-    _tercihlerYukle();
+    _yukle();
   }
 
-  Future<void> _tercihlerYukle() async {
+  Future<void> _yukle() async {
     final sehir = await TercihlerServisi.sehirGetir();
     final bahce = await TercihlerServisi.bahceTipiGetir();
     final bitkiler = await BitkiServisi.bitkileriGuncelleVeGetir();
@@ -147,31 +155,26 @@ bool _bitkilerYukleniyor = true;
       _sehir = sehir;
       _bahceTipi = bahce;
       _bitkiler = bitkiler;
-      _bitkilerYukleniyor = false;
     });
-    _havaGetir();
+    await _havaGetir();
   }
 
   Future<void> _havaGetir() async {
     final koord = sehirKoordinatlar[_sehir] ?? sehirKoordinatlar['Ankara']!;
-    final lat = koord['lat']!;
-    final lon = koord['lon']!;
     try {
       final url = Uri.parse(
         'https://api.open-meteo.com/v1/forecast'
-        '?latitude=$lat&longitude=$lon'
+        '?latitude=${koord['lat']}&longitude=${koord['lon']}'
         '&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m'
-        '&daily=temperature_2m_max,temperature_2m_min,weathercode'
-        '&timezone=Europe%2FIstanbul'
-        '&forecast_days=4',
+        '&timezone=Europe%2FIstanbul',
       );
       final res = await http.get(url);
       if (res.statusCode == 200) {
-        setState(() { _hava = jsonDecode(res.body); _havaYukleniyor = false; });
+        if (mounted) setState(() { _hava = jsonDecode(res.body); _havaYukleniyor = false; });
         return;
       }
     } catch (_) {}
-    setState(() => _havaYukleniyor = false);
+    if (mounted) setState(() => _havaYukleniyor = false);
   }
 
   String get _selamlama {
@@ -181,253 +184,284 @@ bool _bitkilerYukleniyor = true;
     return 'İyi akşamlar,';
   }
 
+  String _icgoruBasligi(String oneri) {
+    if (oneri.contains('Don')) return 'Don riski var.';
+    if (oneri.contains('Yağmur')) return 'Sulamayı erteleyebilirsin.';
+    if (oneri.contains('sıcak')) return 'Sabah erken sulama önerilir.';
+    return 'Bugün sulama için uygun.';
+  }
+
+  String _icgoruAciklama(String oneri) {
+    if (oneri.contains('Don')) return 'Fideleri koru, hassas bitkileri içeri al.';
+    if (oneri.contains('Yağmur')) return 'Doğal yağış toprağı destekleyecek.';
+    if (oneri.contains('sıcak')) return 'Öğlen sulama yapma. Buharlaşma yüksek.';
+    return 'Toprak nemi ideal. Akşam sulaması önerilir.';
+  }
+
+  String _gorevOraniText(Map<String, dynamic> bitki) {
+    final yuzde = (bitki['yuzde'] as double?) ?? 0.5;
+    if (yuzde >= 0.95) return '3/3';
+    if (yuzde >= 0.65) return '2/3';
+    if (yuzde >= 0.35) return '1/3';
+    return '0/3';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
-        extendBodyBehindAppBar: true,
-        extendBody: true,
-        backgroundColor: const Color(0xFFF0EDE8),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset('assets/images/bg2.png', fit: BoxFit.cover),
-            ),
-            Positioned.fill(
-              child: Container(color: Colors.white.withOpacity(0.1)),
-            ),
-            CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(child: _buildHeader()),
-                SliverToBoxAdapter(child: _buildHavaDurumu()),
-                SliverToBoxAdapter(child: _buildAkilliOneri()),
-                SliverToBoxAdapter(child: _buildBitkilerim()),
-                SliverToBoxAdapter(child: _buildHaftalikGorevler()),
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
-            ),
-          ],
-        ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F1E9),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeroHeader()),
+          SliverToBoxAdapter(child: _buildBahceIcGorusu()),
+          SliverToBoxAdapter(child: _buildBitkilerim()),
+          SliverToBoxAdapter(child: _buildAltBolumler()),
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  // ── HERO HEADER ─────────────────────────────────────────────
+  Widget _buildHeroHeader() {
     final topPadding = MediaQuery.of(context).padding.top;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(24, topPadding + 20, 24, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final heroHeight = MediaQuery.of(context).size.height * 0.30;
+
+    return SizedBox(
+      height: heroHeight,
+      child: Stack(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_selamlama, style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textSecondary)),
-              Row(
-                children: [
-                  Text('Mustafa', style: GoogleFonts.dmSans(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-                  const SizedBox(width: 8),
-                  const Text('🌿', style: TextStyle(fontSize: 24)),
-                ],
-              ),
-              Text('Bitkiler mutlu ve büyüyor.', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
-            ],
+          Positioned.fill(
+            child: Image.asset(
+              heroImajGetir(_bahceTipi),
+              fit: BoxFit.cover,
+              alignment: const Alignment(-0.2, -0.6),
+              errorBuilder: (_, __, ___) => Container(color: AppColors.primary),
+            ),
           ),
-          Row(
-            children: [
-              _buildIconBtn(Icons.notifications_outlined, () {}),
-              const SizedBox(width: 8),
-              _buildIconBtn(Icons.add, () {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => BitkiEklePage(
-                    onBitkiEklendi: (yeni) async {
-  await BitkiServisi.bitkiEkle(yeni);
-  final liste = await BitkiServisi.bitkileriGuncelleVeGetir();
-  setState(() => _bitkiler = liste);
-},
-                  ),
-                ));
-              }, filled: true),
-            ],
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.08),
+                    Colors.black.withOpacity(0.15),
+                    const Color(0xFFF5F1E9),
+                  ],
+                  stops: const [0.0, 0.60, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: topPadding + 10,
+            left: 24,
+            right: 24,
+            child: Row(
+              children: [
+                const Icon(Icons.location_on_outlined, color: Colors.white, size: 16),
+                const SizedBox(width: 4),
+                Text(_sehir, style: GoogleFonts.dmSans(
+                  color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 16),
+                const Spacer(),
+                _buildHeroIconBtn(Icons.notifications_outlined, () {}),
+                const SizedBox(width: 10),
+                _buildHeroIconBtn(Icons.add, () async {
+                  await Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => BitkiEklePage(onBitkiEklendi: (yeni) async {
+                      await BitkiServisi.bitkiEkle(yeni);
+                      final liste = await BitkiServisi.bitkileriGuncelleVeGetir();
+                      if (mounted) setState(() => _bitkiler = liste);
+                    }),
+                  ));
+                }, filled: true),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 24, right: 24, bottom: 60,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_selamlama, style: GoogleFonts.dmSans(
+                  fontSize: 15, fontWeight: FontWeight.w500,
+                  color: Colors.white.withOpacity(0.92))),
+                Text('Mustafa 🌿', style: GoogleFonts.cormorantGaramond(
+                  fontSize: 48, fontWeight: FontWeight.w700,
+                  color: Colors.white, height: 1.0)),
+                const SizedBox(height: 5),
+                Text(
+                  _bitkiler.isEmpty ? 'Henüz bitki eklemedin.' : 'Bitkiler mutlu, hasat yakın.',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13, fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.90)),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildIconBtn(IconData icon, VoidCallback onTap, {bool filled = false}) {
+  Widget _buildHeroIconBtn(IconData icon, VoidCallback onTap, {bool filled = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44, height: 44,
+        width: 40, height: 40,
         decoration: BoxDecoration(
-          color: filled ? AppColors.primary : Colors.white.withOpacity(0.8),
+          color: filled ? AppColors.primary : Colors.white.withOpacity(0.88),
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        child: Icon(icon, size: 20, color: filled ? Colors.white : AppColors.textPrimary),
+        child: Icon(icon, size: 19, color: filled ? Colors.white : AppColors.textPrimary),
       ),
     );
   }
 
-  Widget _buildHavaDurumu() {
-  if (_havaYukleniyor) return const SizedBox(height: 80);
-  if (_hava == null) return const SizedBox();
-
-  final c = _hava!['current'];
-  final sicaklik = (c['temperature_2m'] as num).round();
-  final kod = c['weathercode'] as int;
-  final emoji = havaDurumuEmoji(kod);
-  final durum = havaDurumuMetin(kod);
-
-  final daily = _hava!['daily'];
-  final gunler = <Map<String, dynamic>>[];
-  for (int i = 1; i <= 3; i++) {
-    gunler.add({
-      'gun': gunAdi(daily['time'][i] as String),
-      'emoji': havaDurumuEmoji(daily['weathercode'][i] as int),
-      'max': (daily['temperature_2m_max'][i] as num).round(),
-    });
-  }
-
-  return Align(
-    alignment: Alignment.centerLeft,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 0, 0),
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.58 - 24,
+  // ── BAHÇE İÇGÖRÜSÜ ─────────────────────────────────────────
+  Widget _buildBahceIcGorusu() {
+    if (_havaYukleniyor) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
         child: Container(
-          padding: const EdgeInsets.all(14),
+          height: 80,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.75),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 4))],
+            color: Colors.white.withOpacity(0.94),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 18, offset: const Offset(0, 8))],
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Sol — ikon + sıcaklık + şehir + durum
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 28)),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('$sicaklik°', style: GoogleFonts.dmSans(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1)),
-                          Text(_sehir, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
-                          Text(durum, style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Dikey çizgi
-              Container(
-                width: 1,
-                height: 60,
-                color: AppColors.cardBorder,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-              // Sağ — 3 günlük tahmin
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: gunler.map((g) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(g['gun'] as String, style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                        Text(g['emoji'] as String, style: const TextStyle(fontSize: 12)),
-                        Text('${g['max']}°', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                      ],
-                    ),
-                  )).toList(),
-                ),
-              ),
-            ],
-          ),
+          child: const Center(child: CircularProgressIndicator()),
         ),
-      ),
-    ),
-  );
-}
-
-  Widget _buildAkilliOneri() {
+      );
+    }
     if (_hava == null) return const SizedBox();
+
+    final c = _hava!['current'];
+    final sicaklik = (c['temperature_2m'] as num).round();
+    final kod = c['weathercode'] as int;
+    final emoji = havaDurumuEmoji(kod);
+    final durum = havaDurumuMetin(kod);
     final oneri = akilliOneri(_hava!, _bahceTipi);
 
-   return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 12, 0, 0),
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.58 - 24,
-    child: Container(
-      margin: EdgeInsets.zero,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.75),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 3))],
+          color: Colors.white.withOpacity(0.96),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white, width: 1.2),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 24, offset: const Offset(0, 10)),
+          ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 30, height: 30,
-              decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 15),
+            // Sol: sıcaklık
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('BAHÇE İÇGÖRÜSÜ', style: GoogleFonts.dmSans(
+                  fontSize: 10, fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2, color: AppColors.primary)),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('$sicaklik°', style: GoogleFonts.dmSans(
+                      fontSize: 38, fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary, height: 1.0)),
+                    const SizedBox(width: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(emoji, style: const TextStyle(fontSize: 22))),
+                  ],
+                ),
+                Text(durum, style: GoogleFonts.dmSans(
+                  fontSize: 12, color: AppColors.textSecondary)),
+                Text(_sehir, style: GoogleFonts.dmSans(
+                  fontSize: 12, color: AppColors.textSecondary)),
+              ],
             ),
-            const SizedBox(width: 10),
+            // Dikey ayraç
+            Container(
+              width: 1, height: 90,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              color: AppColors.cardBorder,
+            ),
+            // Sağ: içgörü
             Expanded(
-              child: Text(oneri, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_icgoruBasligi(oneri), style: GoogleFonts.dmSans(
+                    fontSize: 13, fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary, height: 1.25)),
+                  const SizedBox(height: 6),
+                  Text(_icgoruAciklama(oneri), style: GoogleFonts.dmSans(
+                    fontSize: 12, height: 1.45,
+                    color: AppColors.textPrimary.withOpacity(0.62))),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Text('Detayı gör', style: GoogleFonts.dmSans(
+                      fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                    const SizedBox(width: 3),
+                    Icon(Icons.arrow_forward, size: 13, color: AppColors.primary),
+                  ]),
+                ],
+              ),
             ),
           ],
         ),
       ),
-      ),
-    ),
-  );
+    );
   }
 
+  // ── BİTKİLERİM ──────────────────────────────────────────────
   Widget _buildBitkilerim() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 14),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Bitkilerim', style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-              Text('Tümü →', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
+              Text('Bitkilerim', style: GoogleFonts.dmSans(
+                fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+              Text('Tümü →', style: GoogleFonts.dmSans(
+                fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(left: 24, right: 24),
-            itemCount: _bitkiler.length + 1,
-            itemBuilder: (context, index) {
-              if (index == _bitkiler.length) return _buildEkleKarti();
-              return _buildBitkiKarti(_bitkiler[index]);
-            },
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+          child: Text(
+            '${_bitkiler.length} aktif bitki · 2 görev · 1 uyarı',
+            style: GoogleFonts.dmSans(
+              fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
           ),
+        ),
+        SizedBox(
+          height: 188,
+          child: _bitkiler.isEmpty
+              ? Center(child: Padding(
+                  padding: const EdgeInsets.only(left: 24),
+                  child: _buildEkleKarti()))
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 24),
+                  itemCount: _bitkiler.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == _bitkiler.length) return _buildEkleKarti();
+                    return _buildBitkiKarti(_bitkiler[index]);
+                  },
+                ),
         ),
       ],
     );
@@ -440,22 +474,18 @@ bool _bitkilerYukleniyor = true;
     final hafta = bitki['hafta'] as int? ?? 1;
     final tur = bitki['tur'] as String? ?? bitki['ad'] as String;
 
-    String asama = 'Büyüme Aşaması';
-    if (hafta <= 2) asama = 'Tohum Aşaması';
-    else if (hafta <= 6) asama = 'Fide Aşaması';
-    else if (hafta <= 10) asama = 'Büyüme Aşaması';
-    else if (hafta <= 13) asama = 'Çiçeklenme';
-    else if (hafta <= 16) asama = 'Meyve Aşaması';
-    else asama = 'Hasat Zamanı';
-
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BitkiDetayPage(bitki: bitki))),
+      onTap: () async {
+        final result = await Navigator.push(context,
+          MaterialPageRoute(builder: (_) => BitkiDetayPage(bitki: bitki)));
+        if (result == true) _yukle();
+      },
       child: Container(
-        width: 160,
-        margin: const EdgeInsets.only(right: 12),
+        width: 142,
+        margin: const EdgeInsets.only(right: 12, bottom: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.20), blurRadius: 16, offset: const Offset(0, 8))],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(22),
@@ -465,72 +495,65 @@ bool _bitkilerYukleniyor = true;
                 child: fotografYolu != null
                     ? Image.asset(fotografYolu, fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1B4332),
-                            child: Center(child: Text(bitki['emoji'] as String? ?? '🌱', style: const TextStyle(fontSize: 52)))))
+                          child: Center(child: Text(bitki['emoji'] as String? ?? '🌱',
+                            style: const TextStyle(fontSize: 44)))))
                     : Container(color: const Color(0xFF1B4332),
-                        child: Center(child: Text(bitki['emoji'] as String? ?? '🌱', style: const TextStyle(fontSize: 52)))),
-              ),
+                        child: Center(child: Text(bitki['emoji'] as String? ?? '🌱',
+                          style: const TextStyle(fontSize: 44))))),
+              Positioned.fill(child: Container(decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: [Colors.white.withOpacity(0.07), Colors.transparent, Colors.black.withOpacity(0.08)],
+                  stops: const [0.0, 0.5, 1.0])))),
+              Positioned(top: 0, left: 0, right: 0, height: 60,
+                child: Container(decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [Colors.white.withOpacity(0.18), Colors.transparent])))),
+              Positioned.fill(child: Container(decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.white.withOpacity(0.20), width: 1.5)))),
               Positioned(top: 10, left: 10,
-                child: Container(
-                  width: 32, height: 32,
+                child: Container(width: 26, height: 26,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                  ),
-                  child: const Icon(Icons.water_drop_outlined, size: 16, color: Colors.white),
-                ),
-              ),
+                    color: Colors.white.withOpacity(0.22), shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.35))),
+                  child: const Icon(Icons.water_drop_outlined, size: 13, color: Colors.white))),
               Positioned(top: 10, right: 10,
                 child: Container(
-                  width: 44, height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black.withOpacity(0.3),
-                    border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(width: 40, height: 40,
-                        child: CircularProgressIndicator(
-                          value: yuzde, strokeWidth: 2.5,
-                          backgroundColor: Colors.white.withOpacity(0.15),
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                        ),
-                      ),
-                      Text('${(yuzde * 100).round()}%', style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(bottom: 0, left: 0, right: 0,
+                    color: Colors.black.withOpacity(0.40),
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(color: Colors.white.withOpacity(0.18))),
+                  child: Text('Hf $hafta', style: GoogleFonts.dmSans(
+                    fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)))),
+              Positioned(bottom: 10, left: 10, right: 10,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(tur, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(asama, style: GoogleFonts.dmSans(fontSize: 10, color: Colors.white.withOpacity(0.8))),
-                      const SizedBox(height: 6),
-                      ClipRRect(
+                    color: Colors.black.withOpacity(0.38),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.14), width: 1)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(tur, style: GoogleFonts.dmSans(
+                      fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 5),
+                    Row(children: [
+                      Expanded(child: ClipRRect(
                         borderRadius: BorderRadius.circular(99),
                         child: LinearProgressIndicator(
                           value: yuzde,
-                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withOpacity(0.20),
                           valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                          minHeight: 4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                          minHeight: 4))),
+                      const SizedBox(width: 7),
+                      Text(_gorevOraniText(bitki), style: GoogleFonts.dmSans(
+                        fontSize: 10, fontWeight: FontWeight.w800,
+                        color: Colors.white.withOpacity(0.90))),
+                    ]),
+                  ]),
+                )),
             ],
           ),
         ),
@@ -542,130 +565,145 @@ bool _bitkilerYukleniyor = true;
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(
         builder: (_) => BitkiEklePage(onBitkiEklendi: (yeni) async {
-  await BitkiServisi.bitkiEkle(yeni);
-  final liste = await BitkiServisi.bitkileriGuncelleVeGetir();
-  setState(() => _bitkiler = liste);
-},),
-      )),
+          await BitkiServisi.bitkiEkle(yeni);
+          final liste = await BitkiServisi.bitkileriGuncelleVeGetir();
+          if (mounted) setState(() => _bitkiler = liste);
+        }))),
       child: Container(
-        width: 110,
+        width: 96, height: 188,
+        margin: const EdgeInsets.only(right: 24, bottom: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
+          border: Border.all(color: AppColors.primary.withOpacity(0.18), width: 1.5),
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 46, height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.primary, shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 22),
-            ),
-            const SizedBox(height: 10),
-            Text('Bitki\nEkle', textAlign: TextAlign.center, style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-          ],
-        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: 44, height: 44,
+            decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.28), blurRadius: 12, offset: const Offset(0, 4))]),
+            child: const Icon(Icons.add, color: Colors.white, size: 22)),
+          const SizedBox(height: 10),
+          Text('Bitki\nEkle', textAlign: TextAlign.center,
+            style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+        ]),
       ),
     );
   }
 
-  Widget _buildHaftalikGorevler() {
-    final gorevler = [
-      {'baslik': 'Sulama', 'bitki': 'Cherry Domates', 'durum': 'Bugün', 'tamamlandi': true, 'ikon': Icons.water_drop_outlined},
-      {'baslik': 'Gübreleme', 'bitki': 'Salatalık', 'durum': 'Yarın', 'tamamlandi': false, 'ikon': Icons.eco_outlined},
-      {'baslik': 'Destek Çubuğu Ekle', 'bitki': 'Cherry Domates', 'durum': '2 Gün Kaldı', 'tamamlandi': false, 'ikon': Icons.vertical_align_top},
-    ];
-
+  // ── ALT BÖLÜMLER ─────────────────────────────────────────────
+  Widget _buildAltBolumler() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Bu Haftanın Görevleri', style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-              Text('1 / 3 tamam', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.secondary, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.75),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.5),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 4))],
-            ),
-            child: Column(
-              children: gorevler.asMap().entries.map((e) {
-                final i = e.key;
-                final g = e.value;
-                return Column(
-                  children: [
-                    _buildGorevSatiri(g),
-                    if (i < gorevler.length - 1)
-                      Divider(height: 1, color: AppColors.cardBorder.withOpacity(0.5), indent: 68),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
+          Expanded(child: _buildHaftalikGorevlerKarti()),
+          const SizedBox(width: 14),
+          Expanded(child: _buildSeyirDefterimKarti()),
         ],
       ),
     );
   }
 
-  Widget _buildGorevSatiri(Map<String, dynamic> gorev) {
-    final tamamlandi = gorev['tamamlandi'] as bool;
-    final ikon = gorev['ikon'] as IconData;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: tamamlandi ? AppColors.secondary.withOpacity(0.12) : Colors.white.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(ikon, size: 18, color: tamamlandi ? AppColors.secondary : AppColors.textSecondary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(gorev['baslik'] as String, style: GoogleFonts.dmSans(
-                  fontSize: 14, fontWeight: FontWeight.w600,
-                  color: tamamlandi ? AppColors.textSecondary : AppColors.textPrimary,
-                  decoration: tamamlandi ? TextDecoration.lineThrough : null,
-                )),
-                Text(gorev['bitki'] as String, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-          Text(gorev['durum'] as String, style: GoogleFonts.dmSans(
-            fontSize: 12,
-            color: tamamlandi ? AppColors.secondary : AppColors.textSecondary,
-            fontWeight: FontWeight.w500,
-          )),
-          const SizedBox(width: 10),
-          Container(
-            width: 24, height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: tamamlandi ? AppColors.secondary : Colors.transparent,
-              border: Border.all(color: tamamlandi ? AppColors.secondary : AppColors.cardBorder, width: 1.5),
-            ),
-            child: tamamlandi ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
-          ),
-        ],
+  Widget _buildHaftalikGorevlerKarti() {
+    final gorevler = [
+      {'baslik': 'Sulama', 'tamamlandi': true},
+      {'baslik': 'Gübreleme', 'tamamlandi': false},
+      {'baslik': 'Destek Çubuğu', 'tamamlandi': false},
+    ];
+    final tamamlanan = gorevler.where((g) => g['tamamlandi'] as bool).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.90),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.95), width: 1.2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 18, offset: const Offset(0, 7))],
       ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text('BU HAFTA', style: GoogleFonts.dmSans(
+            fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: AppColors.primary))),
+          Text('$tamamlanan/${gorevler.length}', style: GoogleFonts.dmSans(
+            fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.secondary)),
+        ]),
+        const SizedBox(height: 12),
+        ...gorevler.asMap().entries.map((e) {
+          final i = e.key;
+          final g = e.value;
+          final tamamlandi = g['tamamlandi'] as bool;
+          return Padding(
+            padding: EdgeInsets.only(bottom: i < gorevler.length - 1 ? 10 : 0),
+            child: Row(children: [
+              Container(width: 22, height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: tamamlandi ? AppColors.secondary : Colors.transparent,
+                  border: Border.all(color: tamamlandi ? AppColors.secondary : AppColors.cardBorder, width: 1.5)),
+                child: tamamlandi ? const Icon(Icons.check, size: 12, color: Colors.white) : null),
+              const SizedBox(width: 8),
+              Expanded(child: Text(g['baslik'] as String, style: GoogleFonts.dmSans(
+                fontSize: 12, fontWeight: FontWeight.w600,
+                color: tamamlandi ? AppColors.textSecondary : AppColors.textPrimary,
+                decoration: tamamlandi ? TextDecoration.lineThrough : null),
+                maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ]),
+          );
+        }),
+      ]),
+    );
+  }
+
+  Widget _buildSeyirDefterimKarti() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.86),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.95), width: 1.2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 18, offset: const Offset(0, 7))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text('SEYİR DEFTERİM', style: GoogleFonts.dmSans(
+            fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: AppColors.primary))),
+          Text('Tümü →', style: GoogleFonts.dmSans(
+            fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+        ]),
+        const SizedBox(height: 10),
+        Text('16 Mayıs · 19:20', style: GoogleFonts.dmSans(
+          fontSize: 11, color: AppColors.textSecondary)),
+        const SizedBox(height: 5),
+        Text('Domateslerde ilk\nçiçek salkımları.', style: GoogleFonts.cormorantGaramond(
+          fontSize: 17, fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary, height: 1.15)),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset('assets/images/pembe_domates.png',
+            height: 68, width: double.infinity, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(height: 68,
+              decoration: BoxDecoration(color: AppColors.cardBorder,
+                borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.image_outlined, color: Colors.white54))),
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () {},
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12)),
+            child: Text('✎ Yeni kayıt ekle', textAlign: TextAlign.center,
+              style: GoogleFonts.dmSans(
+                fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+          ),
+        ),
+      ]),
     );
   }
 }
