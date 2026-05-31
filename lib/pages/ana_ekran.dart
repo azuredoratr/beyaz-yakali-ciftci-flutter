@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../services/tercihler_servisi.dart';
 import '../services/bitki_servisi.dart';
+import '../services/gorev_servisi.dart';
 import 'bitki_ekle.dart';
 import 'bitki_detay.dart';
 
@@ -72,7 +75,8 @@ String heroImajGetir(String bahceTipi) {
   final bt = bahceTipi.toLowerCase();
   if (bt.contains('tarla') || bt.contains('arazi')) {
     tip = 'tarla';
-  } else if (bt.contains('saksı') || bt.contains('saksi') || bt.contains('balkon') || bt.contains('ev')) {
+  } else if (bt.contains('saksı') || bt.contains('saksi') ||
+      bt.contains('balkon') || bt.contains('ev')) {
     tip = 'saksi';
   } else {
     tip = 'bahce';
@@ -140,6 +144,10 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
   bool _havaYukleniyor = true;
   String _sehir = 'Ankara';
   String _bahceTipi = 'bahce';
+  Map<String, dynamic>? _sonSeyirKaydi;
+  List<Map<String, dynamic>> _haftalikGorevler = [];
+  int _toplamGorev = 0;
+  int _toplamTamamlanan = 0;
 
   @override
   void initState() {
@@ -156,7 +164,39 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
       _bahceTipi = bahce;
       _bitkiler = bitkiler;
     });
-    await _havaGetir();
+    await Future.wait([
+      _sonSeyirKaydiniGetir(),
+      _haftalikGorevleriGetir(),
+      _havaGetir(),
+    ]);
+  }
+
+  Future<void> _sonSeyirKaydiniGetir() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString('seyir_kayitlari');
+    if (json != null) {
+      final liste = jsonDecode(json) as List;
+      if (liste.isNotEmpty && mounted) {
+        setState(() => _sonSeyirKaydi = liste.last as Map<String, dynamic>);
+      }
+    }
+  }
+
+  Future<void> _haftalikGorevleriGetir() async {
+    if (_bitkiler.isEmpty) return;
+    try {
+      final sonuc = await GorevServisi.anaEkranGorevleriniGetir(_bitkiler);
+      if (!mounted) return;
+      final meta = sonuc.firstWhere(
+        (e) => e['__meta__'] == true,
+        orElse: () => {'toplamGorev': 0, 'toplamTamamlanan': 0},
+      );
+      setState(() {
+        _toplamGorev = meta['toplamGorev'] as int? ?? 0;
+        _toplamTamamlanan = meta['toplamTamamlanan'] as int? ?? 0;
+        _haftalikGorevler = sonuc.where((e) => e['__meta__'] != true).toList();
+      });
+    } catch (_) {}
   }
 
   Future<void> _havaGetir() async {
@@ -257,8 +297,7 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
           ),
           Positioned(
             top: topPadding + 10,
-            left: 24,
-            right: 24,
+            left: 24, right: 24,
             child: Row(
               children: [
                 const Icon(Icons.location_on_outlined, color: Colors.white, size: 16),
@@ -277,6 +316,7 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
                       if (mounted) setState(() => _bitkiler = liste);
                     }),
                   ));
+                  _yukle();
                 }, filled: true),
               ],
             ),
@@ -355,14 +395,11 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
           color: Colors.white.withOpacity(0.96),
           borderRadius: BorderRadius.circular(26),
           border: Border.all(color: Colors.white, width: 1.2),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 24, offset: const Offset(0, 10)),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 24, offset: const Offset(0, 10))],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sol: sıcaklık
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -382,19 +419,11 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
                       child: Text(emoji, style: const TextStyle(fontSize: 22))),
                   ],
                 ),
-                Text(durum, style: GoogleFonts.dmSans(
-                  fontSize: 12, color: AppColors.textSecondary)),
-                Text(_sehir, style: GoogleFonts.dmSans(
-                  fontSize: 12, color: AppColors.textSecondary)),
+                Text(durum, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+                Text(_sehir, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
               ],
             ),
-            // Dikey ayraç
-            Container(
-              width: 1, height: 90,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              color: AppColors.cardBorder,
-            ),
-            // Sağ: içgörü
+            Container(width: 1, height: 90, margin: const EdgeInsets.symmetric(horizontal: 16), color: AppColors.cardBorder),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,7 +471,7 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
           child: Text(
-            '${_bitkiler.length} aktif bitki · 2 görev · 1 uyarı',
+            '${_bitkiler.length} aktif bitki · $_toplamGorev görev · ${_toplamGorev - _toplamTamamlanan} bekliyor',
             style: GoogleFonts.dmSans(
               fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
           ),
@@ -595,115 +624,242 @@ class _AnaEkranPageState extends State<AnaEkranPage> {
   Widget _buildAltBolumler() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildHaftalikGorevlerKarti()),
-          const SizedBox(width: 14),
-          Expanded(child: _buildSeyirDefterimKarti()),
-        ],
-      ),
+      child: Column(children: [
+        _buildHaftalikGorevlerKarti(),
+        const SizedBox(height: 16),
+        _buildSeyirDefterimKarti(),
+      ]),
     );
   }
 
   Widget _buildHaftalikGorevlerKarti() {
-    final gorevler = [
-      {'baslik': 'Sulama', 'tamamlandi': true},
-      {'baslik': 'Gübreleme', 'tamamlandi': false},
-      {'baslik': 'Destek Çubuğu', 'tamamlandi': false},
-    ];
-    final tamamlanan = gorevler.where((g) => g['tamamlandi'] as bool).length;
+    final oran = _toplamGorev > 0 ? _toplamTamamlanan / _toplamGorev : 0.0;
+    final kalanSayi = _toplamGorev - _toplamTamamlanan;
+    final siradaki = _haftalikGorevler
+        .where((g) => !(g['tamamTamamlandi'] as bool? ?? true))
+        .firstOrNull;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.90),
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.95), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 18, offset: const Offset(0, 7))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text('BU HAFTA', style: GoogleFonts.dmSans(
-            fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: AppColors.primary))),
-          Text('$tamamlanan/${gorevler.length}', style: GoogleFonts.dmSans(
-            fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.secondary)),
-        ]),
-        const SizedBox(height: 12),
-        ...gorevler.asMap().entries.map((e) {
-          final i = e.key;
-          final g = e.value;
-          final tamamlandi = g['tamamlandi'] as bool;
-          return Padding(
-            padding: EdgeInsets.only(bottom: i < gorevler.length - 1 ? 10 : 0),
-            child: Row(children: [
-              Container(width: 22, height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: tamamlandi ? AppColors.secondary : Colors.transparent,
-                  border: Border.all(color: tamamlandi ? AppColors.secondary : AppColors.cardBorder, width: 1.5)),
-                child: tamamlandi ? const Icon(Icons.check, size: 12, color: Colors.white) : null),
-              const SizedBox(width: 8),
-              Expanded(child: Text(g['baslik'] as String, style: GoogleFonts.dmSans(
-                fontSize: 12, fontWeight: FontWeight.w600,
-                color: tamamlandi ? AppColors.textSecondary : AppColors.textPrimary,
-                decoration: tamamlandi ? TextDecoration.lineThrough : null),
-                maxLines: 1, overflow: TextOverflow.ellipsis)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Sol: ring
+        SizedBox(
+          width: 76, height: 76,
+          child: Stack(alignment: Alignment.center, children: [
+            SizedBox(
+              width: 76, height: 76,
+              child: CircularProgressIndicator(
+                value: oran,
+                strokeWidth: 6.5,
+                backgroundColor: AppColors.cardBorder,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+              ),
+            ),
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('$_toplamTamamlanan/$_toplamGorev', style: GoogleFonts.dmSans(
+                fontSize: 13, fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary, height: 1.0)),
+              Text('tamam', style: GoogleFonts.dmSans(
+                fontSize: 9, color: AppColors.textSecondary)),
             ]),
-          );
-        }),
+          ]),
+        ),
+        const SizedBox(width: 18),
+        // Sağ: detay
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Text('BU HAFTA', style: GoogleFonts.dmSans(
+                fontSize: 11, fontWeight: FontWeight.w800,
+                letterSpacing: 1.1, color: AppColors.primary)),
+              const Spacer(),
+              if (kalanSayi > 0 && _toplamGorev > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(99)),
+                  child: Text('$kalanSayi kaldı', style: GoogleFonts.dmSans(
+                    fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary))),
+            ]),
+            const SizedBox(height: 4),
+            Text(
+              _toplamGorev == 0
+                  ? 'Henüz bitki eklemedin'
+                  : '$_toplamTamamlanan/$_toplamGorev görev tamamlandı',
+              style: GoogleFonts.dmSans(
+                fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 10),
+            // Görev listesi — gruplı
+            if (_haftalikGorevler.isEmpty && _bitkiler.isNotEmpty)
+              Text('Görevler yükleniyor...', style: GoogleFonts.dmSans(
+                fontSize: 11, color: AppColors.textSecondary)),
+            ..._haftalikGorevler.map((g) {
+              final ad = g['gorevAd'] as String? ?? '';
+              final tamamlandi = g['tamamTamamlandi'] as bool? ?? false;
+              final bitkiler = tamamlandi
+                  ? (g['bitkiler'] as List?)?.cast<String>() ?? <String>[]
+                  : (g['tamamlanmayanBitkiler'] as List?)?.cast<String>() ?? <String>[];
+              final bitkiMetni = bitkiler.join(', ');
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Container(
+                      width: 18, height: 18,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: tamamlandi ? AppColors.secondary : Colors.transparent,
+                        border: Border.all(
+                          color: tamamlandi ? AppColors.secondary : AppColors.cardBorder,
+                          width: 1.5)),
+                      child: tamamlandi ? const Icon(Icons.check, size: 10, color: Colors.white) : null),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(ad, style: GoogleFonts.dmSans(
+                      fontSize: 12, fontWeight: FontWeight.w700,
+                      color: tamamlandi ? AppColors.textSecondary : AppColors.textPrimary,
+                      decoration: tamamlandi ? TextDecoration.lineThrough : null,
+                      decorationColor: AppColors.textSecondary)),
+                    if (bitkiMetni.isNotEmpty)
+                      Text(bitkiMetni, style: GoogleFonts.dmSans(
+                        fontSize: 10.5, color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500)),
+                  ])),
+                ]),
+              );
+            }),
+            if (_toplamGorev > 0 && kalanSayi == 0) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Text('🎉', style: TextStyle(fontSize: 15)),
+                const SizedBox(width: 8),
+                Text('Bu haftaki tüm görevler tamam!', style: GoogleFonts.dmSans(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.secondary)),
+              ]),
+            ],
+            if (_toplamGorev > 0 && siradaki != null) ...[
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () {},
+                child: Row(children: [
+                  Text('Tüm görevleri gör', style: GoogleFonts.dmSans(
+                    fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward, size: 13, color: AppColors.primary),
+                ]),
+              ),
+            ],
+          ]),
+        ),
       ]),
     );
   }
 
   Widget _buildSeyirDefterimKarti() {
+    final kayit = _sonSeyirKaydi;
+
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.86),
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.95), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 18, offset: const Offset(0, 7))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text('SEYİR DEFTERİM', style: GoogleFonts.dmSans(
-            fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.1, color: AppColors.primary))),
+      child: kayit != null ? _buildSeyirDoluHal(kayit) : _buildSeyirBosHal(),
+    );
+  }
+
+  Widget _buildSeyirDoluHal(Map<String, dynamic> kayit) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+        child: Row(children: [
+          Text('SEYİR DEFTERİM', style: GoogleFonts.dmSans(
+            fontSize: 11, fontWeight: FontWeight.w800,
+            letterSpacing: 1.1, color: AppColors.primary)),
+          const Spacer(),
           Text('Tümü →', style: GoogleFonts.dmSans(
-            fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+            fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
         ]),
-        const SizedBox(height: 10),
-        Text('16 Mayıs · 19:20', style: GoogleFonts.dmSans(
-          fontSize: 11, color: AppColors.textSecondary)),
-        const SizedBox(height: 5),
-        Text('Domateslerde ilk\nçiçek salkımları.', style: GoogleFonts.cormorantGaramond(
-          fontSize: 17, fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary, height: 1.15)),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.asset('assets/images/pembe_domates.png',
-            height: 68, width: double.infinity, fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(height: 68,
-              decoration: BoxDecoration(color: AppColors.cardBorder,
-                borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.image_outlined, color: Colors.white54))),
-        ),
-        const SizedBox(height: 10),
-        GestureDetector(
-          onTap: () {},
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12)),
-            child: Text('✎ Yeni kayıt ekle', textAlign: TextAlign.center,
-              style: GoogleFonts.dmSans(
-                fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
-          ),
-        ),
+      ),
+      if (kayit['fotoPath'] != null)
+        Image.file(
+          File(kayit['fotoPath'] as String),
+          height: 140, width: double.infinity, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _seyirFotoPH())
+      else
+        _seyirFotoPH(),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(kayit['baslik'] as String? ?? '', style: GoogleFonts.cormorantGaramond(
+            fontSize: 20, fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary, height: 1.2),
+            maxLines: 2, overflow: TextOverflow.ellipsis),
+          if ((kayit['not'] as String? ?? '').isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(kayit['not'] as String, style: GoogleFonts.dmSans(
+              fontSize: 12, color: AppColors.textSecondary, height: 1.45),
+              maxLines: 2, overflow: TextOverflow.ellipsis),
+          ],
+          const SizedBox(height: 10),
+          Row(children: [
+            Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textSecondary),
+            const SizedBox(width: 5),
+            Text(kayit['tarih'] as String? ?? '', style: GoogleFonts.dmSans(
+              fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(width: 10),
+            Icon(Icons.access_time, size: 12, color: AppColors.textSecondary),
+            const SizedBox(width: 5),
+            Text(kayit['saat'] as String? ?? '', style: GoogleFonts.dmSans(
+              fontSize: 11, color: AppColors.textSecondary)),
+          ]),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _buildSeyirBosHal() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      child: Row(children: [
+        Container(width: 48, height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.08),
+            shape: BoxShape.circle),
+          child: Icon(Icons.auto_stories_outlined,
+            color: AppColors.primary.withOpacity(0.55), size: 24)),
+        const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('SEYİR DEFTERİM', style: GoogleFonts.dmSans(
+            fontSize: 11, fontWeight: FontWeight.w800,
+            letterSpacing: 1.1, color: AppColors.primary)),
+          const SizedBox(height: 4),
+          Text('Henüz kayıt yok', style: GoogleFonts.dmSans(
+            fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          const SizedBox(height: 2),
+          Text('İlk gözlemini ekle →', style: GoogleFonts.dmSans(
+            fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+        ])),
       ]),
     );
+  }
+
+  Widget _seyirFotoPH() {
+    return Container(
+      height: 140,
+      color: AppColors.cardBorder.withOpacity(0.30),
+      child: Center(child: Icon(Icons.image_outlined,
+        color: AppColors.primary.withOpacity(0.25), size: 32)));
   }
 }

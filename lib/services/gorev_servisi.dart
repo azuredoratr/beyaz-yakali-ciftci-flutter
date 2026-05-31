@@ -95,4 +95,52 @@ class GorevServisi {
     final key = 'gorev_${bitkiId}_$hafta';
     return prefs.getStringList(key) ?? [];
   }
+  /// Ana ekran için: tüm bitlerin bu haftaki görevlerini birleştirilmiş halde getirir.
+/// Dönüş: [ {'gorevAd': 'Sulama', 'bitkiler': ['Domates', 'Salatalık'], 'tamamlandi': false}, ... ]
+static Future<List<Map<String, dynamic>>> anaEkranGorevleriniGetir(
+    List<Map<String, dynamic>> bitkiler) async {
+  await yukle();
+
+  // gorevAd → {bitkiler: [], tamamlananSayisi: 0, toplamSayi: 0}
+  final Map<String, Map<String, dynamic>> gorevMap = {};
+  int toplamGorev = 0;
+  int toplamTamamlanan = 0;
+
+  for (final bitki in bitkiler) {
+    final bitkiId = bitki['bitki_id'] as String? ?? '';
+    final hafta = bitki['hafta'] as int? ?? 1;
+    final baslangic = bitki['baslangic'] as String? ?? 'tohum';
+    final bitkiAd = bitki['tur'] as String? ?? bitki['ad'] as String? ?? '?';
+
+    final gorevler = await gorevleriGetir(
+        bitkiId: bitkiId, hafta: hafta, baslangic: baslangic);
+    final tamamlananlar = await tamamlananGorevler(bitkiId, hafta);
+
+    for (final g in gorevler) {
+      final ad = g['ad'] as String;
+      final tamamlandi = tamamlananlar.contains(g['id'] as String);
+      toplamGorev++;
+      if (tamamlandi) toplamTamamlanan++;
+
+      if (!gorevMap.containsKey(ad)) {
+        gorevMap[ad] = {
+          'gorevAd': ad,
+          'bitkiler': <String>[],
+          'tamamlanmayanBitkiler': <String>[],
+          'tamamTamamlandi': true,
+        };
+      }
+      (gorevMap[ad]!['bitkiler'] as List<String>).add(bitkiAd);
+      if (!tamamlandi) {
+        (gorevMap[ad]!['tamamlanmayanBitkiler'] as List<String>).add(bitkiAd);
+        gorevMap[ad]!['tamamTamamlandi'] = false;
+      }
+    }
+  }
+
+  return [
+    {'__meta__': true, 'toplamGorev': toplamGorev, 'toplamTamamlanan': toplamTamamlanan},
+    ...gorevMap.values.toList(),
+  ];
+}
 }
