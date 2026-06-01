@@ -6,6 +6,7 @@ import 'pages/takvim.dart';
 import 'pages/sorun_bildir.dart';
 import 'pages/onboarding.dart';
 import 'services/tercihler_servisi.dart';
+import 'pages/profil.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,7 +118,7 @@ class _AnaSayfaState extends State<AnaSayfa> {
     const TakvimPage(),
     const Scaffold(body: Center(child: Text('Bitkilerim'))),
     const SorunBildirPage(),
-    const Scaffold(body: Center(child: Text('Profil'))),
+    const ProfilPage(),
   ];
 
   @override
